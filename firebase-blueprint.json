@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and permissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "status": { "type": "string", "enum": ["Aktif", "Nonaktif"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "assignedProducts": { "type": "array", "items": { "type": "string" } },
+        "assignedFBAccounts": { "type": "array", "items": { "type": "string" } },
+        "assignedGAdsAccounts": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Campaign": {
+      "title": "Campaign",
+      "description": "Ad campaign performance data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "platform": { "type": "string", "enum": ["fb", "google"] },
+        "product": { "type": "string" },
+        "spend": { "type": "number" },
+        "leads": { "type": "number" },
+        "ctr": { "type": "string" },
+        "tanggal": { "type": "string" },
+        "user_id": { "type": "string" },
+        "user_name": { "type": "string" }
+      },
+      "required": ["id", "name", "platform", "tanggal"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/campaigns/{campaignId}": {
+      "schema": "Campaign",
+      "description": "Campaign data records"
+    }
+  }
+}

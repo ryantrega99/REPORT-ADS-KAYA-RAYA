@@ -1,0 +1,533 @@
+import express from "express";
+import { createServer as createViteServer } from "vite";
+import path from "path";
+import fs from "fs/promises";
+import { fileURLToPath } from "url";
+
+console.log("Starting server.ts...");
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DATA_DIR = path.join(__dirname, "data");
+const USERS_FILE = path.join(DATA_DIR, "users.json");
+const CAMPAIGNS_FILE = path.join(DATA_DIR, "campaigns.json");
+
+async function ensureDataDir() {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    let users = [];
+    try {
+      const content = await fs.readFile(USERS_FILE, 'utf-8');
+      users = JSON.parse(content);
+    } catch {
+      users = [];
+    }
+
+    const adminEmail = "lkbimrbob@gmail.com";
+    const adminPass = "kayaraya123";
+    const adminIdx = users.findIndex((u: any) => u.email === adminEmail);
+
+    if (adminIdx === -1) {
+      // Add super admin if not exists
+      users.push({
+        id: "super-admin",
+        name: "Super Admin",
+        email: adminEmail,
+        pass: adminPass,
+        role: "admin",
+        color: "#4f46e5",
+        initials: "SA",
+        status: "Aktif",
+        createdAt: new Date().toISOString(),
+        assignedProducts: [],
+        assignedFBAccounts: [],
+        assignedGAdsAccounts: []
+      });
+    } else {
+      // Ensure existing admin has correct password and role
+      users[adminIdx].pass = adminPass;
+      users[adminIdx].role = "admin";
+      users[adminIdx].status = "Aktif";
+    }
+
+    await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+
+    try {
+      await fs.access(CAMPAIGNS_FILE);
+    } catch {
+      await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify({}));
+    }
+  } catch (err) {
+    console.error("Failed to ensure data directory:", err);
+  }
+}
+
+async function startServer() {
+  await ensureDataDir();
+  const app = express();
+  const PORT = 3000;
+
+  app.use(express.json({ limit: '10mb' }));
+
+  // Logging middleware
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
+
+  // --- Auth & User Management ---
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const users = JSON.parse(await fs.readFile(USERS_FILE, "utf-8"));
+      const user = users.find((u: any) => u.email === email && u.pass === password);
+      
+      if (user) {
+        const { pass, ...userWithoutPass } = user;
+        res.json({ ok: true, user: userWithoutPass });
+      } else {
+        res.status(401).json({ ok: false, error: "Email atau password salah" });
+      }
+    } catch (err) {
+      res.status(500).json({ ok: false, error: "Server error" });
+    }
+  });
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { name, email, password } = req.body;
+      const users = JSON.parse(await fs.readFile(USERS_FILE, "utf-8"));
+      
+      if (users.find((u: any) => u.email === email)) {
+        return res.status(400).json({ ok: false, error: "Email sudah terdaftar" });
+      }
+
+      const newUser = {
+        id: Math.random().toString(36).substring(2, 9),
+        name,
+        email,
+        pass: password,
+        role: users.length === 0 ? "admin" : "user", // First user is admin
+        color: "#" + Math.floor(Math.random()*16777215).toString(16),
+        initials: name.split(" ").map((n: string) => n[0]).join("").toUpperCase(),
+        status: "Aktif",
+        createdAt: new Date().toISOString()
+      };
+
+      users.push(newUser);
+      await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+      
+      const { pass, ...userWithoutPass } = newUser;
+      res.json({ ok: true, user: userWithoutPass });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: "Server error" });
+    }
+  });
+
+  app.get("/api/users", async (req, res) => {
+    try {
+      const users = JSON.parse(await fs.readFile(USERS_FILE, "utf-8"));
+      const safeUsers = users.map(({ pass, ...u }: any) => u);
+      res.json({ ok: true, users: safeUsers });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: "Server error" });
+    }
+  });
+
+  app.post("/api/users/update", async (req, res) => {
+    try {
+      const updatedUser = req.body;
+      const users = JSON.parse(await fs.readFile(USERS_FILE, "utf-8"));
+      const idx = users.findIndex((u: any) => u.id === updatedUser.id);
+      
+      if (idx !== -1) {
+        // Preserve password if not provided
+        if (!updatedUser.pass) updatedUser.pass = users[idx].pass;
+        users[idx] = { ...users[idx], ...updatedUser };
+        await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+        res.json({ ok: true });
+      } else {
+        res.status(404).json({ ok: false, error: "User not found" });
+      }
+    } catch (err) {
+      res.status(500).json({ ok: false, error: "Server error" });
+    }
+  });
+
+  // --- Campaign Data Management ---
+
+  app.get("/api/data", async (req, res) => {
+    try {
+      const data = JSON.parse(await fs.readFile(CAMPAIGNS_FILE, "utf-8"));
+      res.json({ ok: true, data });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: "Server error" });
+    }
+  });
+
+  app.post("/api/data", async (req, res) => {
+    try {
+      const { userId, campaigns } = req.body;
+      const data = JSON.parse(await fs.readFile(CAMPAIGNS_FILE, "utf-8"));
+      data[userId] = { campaigns };
+      await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify(data, null, 2));
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: "Server error" });
+    }
+  });
+
+  // --- Facebook Ads Proxy ---
+
+  app.post("/api/fb-ads", async (req, res) => {
+    try {
+      const { accountId, token, datePreset, startDate, endDate } = req.body;
+      
+      const params: any = {
+        level: 'campaign',
+        fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,actions',
+        access_token: token,
+        limit: '100'
+      };
+
+      if (datePreset === 'custom') {
+        params.time_range = JSON.stringify({ since: startDate, until: endDate });
+      } else {
+        params.date_preset = datePreset;
+      }
+
+      const url = `https://graph.facebook.com/v21.0/${accountId}/insights?` + new URLSearchParams(params).toString();
+      const fbRes = await fetch(url);
+      const result = await fbRes.json();
+      
+      if (result.error) {
+        return res.status(400).json({ ok: false, error: result.error.message });
+      }
+      
+      res.json({ ok: true, data: result.data });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // --- WhatsApp (Fonnte) Proxy ---
+
+  app.post("/api/wa/send", async (req, res) => {
+    try {
+      const { target, message, token } = req.body;
+      const waToken = token || process.env.WA_TOKEN;
+
+      if (!waToken) {
+        return res.status(400).json({ ok: false, error: "WhatsApp Token is missing" });
+      }
+
+      const waRes = await fetch("https://api.fonnte.com/send", {
+        method: "POST",
+        headers: { "Authorization": waToken },
+        body: new URLSearchParams({ target, message })
+      });
+      
+      const result = await waRes.json();
+      res.json({ ok: result.status, message: result.reason || "Sent" });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // API Route for Google Ads
+  app.post("/api/google-ads", async (req, res) => {
+    try {
+      const { customerId, dateRange, startDate, endDate } = req.body;
+
+      if (!customerId) {
+        return res.status(400).json({ ok: false, error: "Customer ID is required" });
+      }
+
+      const CLIENT_ID = process.env.GADS_CLIENT_ID;
+      const CLIENT_SECRET = process.env.GADS_CLIENT_SECRET;
+      const REFRESH_TOKEN = process.env.GADS_REFRESH_TOKEN;
+      const DEVELOPER_TOKEN = process.env.GADS_DEVELOPER_TOKEN;
+      const MCC_ID = process.env.GADS_MCC_ID;
+
+      if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !DEVELOPER_TOKEN) {
+        return res.status(500).json({ 
+          ok: false, 
+          error: "Server configuration missing Google Ads credentials (ClientID, Secret, RefreshToken, or DevToken). Please set them in the environment variables." 
+        });
+      }
+
+      // 1. Get Access Token
+      const cleanId = (CLIENT_ID || "").replace(/\s+/g, '').replace(/^["']|["']$/g, '');
+      const cleanSecret = (CLIENT_SECRET || "").replace(/\s+/g, '').replace(/^["']|["']$/g, '');
+      const cleanRefresh = (REFRESH_TOKEN || "").replace(/\s+/g, '').replace(/^["']|["']$/g, '');
+
+      const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: cleanId,
+          client_secret: cleanSecret,
+          refresh_token: cleanRefresh,
+          grant_type: "refresh_token",
+        }),
+      });
+
+      const tokenData = await tokenResponse.json();
+      if (tokenData.error) {
+        let errorMsg = `OAuth Error: ${tokenData.error} - ${tokenData.error_description || 'No description'}`;
+        if (tokenData.error === 'unauthorized_client') {
+          errorMsg = `Gagal: OAuth Error: unauthorized_client. Detail: ${tokenData.error_description || 'No description'}. Pastikan Anda men-generate Refresh Token menggunakan Client ID yang SAMA dengan yang ada di pengaturan ini.`;
+        } else if (tokenData.error === 'invalid_client') {
+          errorMsg = `Gagal: OAuth Error: invalid_client. Detail: ${tokenData.error_description || 'No description'}. Client ID atau Client Secret salah.`;
+        } else if (tokenData.error === 'invalid_grant') {
+          errorMsg = `Gagal: OAuth Error: invalid_grant. Detail: ${tokenData.error_description || 'No description'}. Refresh token tidak valid atau sudah dicabut.`;
+        }
+        return res.status(401).json({ ok: false, error: errorMsg });
+      }
+      const accessToken = tokenData.access_token;
+      const cleanCustomerId = String(customerId).replace(/\D/g, "");
+      const cleanMccId = MCC_ID ? String(MCC_ID).replace(/\D/g, "") : "";
+
+      // 2. Fetch Data from Google Ads using the library
+      const { GoogleAdsApi } = await import("google-ads-api");
+      const client = new GoogleAdsApi({
+        client_id: cleanId,
+        client_secret: cleanSecret,
+        developer_token: DEVELOPER_TOKEN.trim(),
+      });
+
+      // Helper to fetch campaigns for a specific customer ID
+      async function fetchCampaignsForCustomer(targetId: string, loginId?: string) {
+        const customer = client.Customer({
+          customer_id: targetId,
+          login_customer_id: loginId,
+          refresh_token: cleanRefresh,
+        });
+
+        // Get customer descriptive name first
+        let accountName = targetId;
+        try {
+          const info = await customer.query(`SELECT customer.descriptive_name FROM customer LIMIT 1`);
+          accountName = info[0]?.customer?.descriptive_name || targetId;
+        } catch (e) {
+          console.warn(`Could not fetch name for ${targetId}`);
+        }
+
+        let dateQuery = `segments.date DURING ${dateRange || "LAST_7_DAYS"}`;
+        if (dateRange === "CUSTOM" && startDate && endDate) {
+          const formattedStart = startDate.length === 8 
+            ? `${startDate.substring(0, 4)}-${startDate.substring(4, 6)}-${startDate.substring(6, 8)}`
+            : startDate;
+          const formattedEnd = endDate.length === 8 
+            ? `${endDate.substring(0, 4)}-${endDate.substring(4, 6)}-${endDate.substring(6, 8)}`
+            : endDate;
+          dateQuery = `segments.date BETWEEN '${formattedStart}' AND '${formattedEnd}'`;
+        }
+
+        const query = `
+          SELECT 
+            campaign.id, 
+            campaign.name, 
+            campaign.status,
+            campaign.advertising_channel_type,
+            metrics.cost_micros, 
+            metrics.conversions, 
+            metrics.impressions, 
+            metrics.clicks, 
+            metrics.ctr,
+            metrics.average_cpc,
+            metrics.conversions_from_interactions_rate,
+            segments.date 
+          FROM campaign 
+          WHERE campaign.status != 'REMOVED' 
+          AND ${dateQuery}
+        `;
+        
+        const results = await customer.query(query);
+        return results
+          .filter((row: any) => row.campaign.status === 'ENABLED' || (row.metrics.cost_micros && row.metrics.cost_micros > 0))
+          .map((row: any) => ({
+            id: row.campaign.id,
+            name: row.campaign.name,
+            status: row.campaign.status,
+            advertisingChannelType: row.campaign.advertising_channel_type,
+            account_name: accountName,
+            account_id: targetId,
+            platform: "google",
+            product: "Umum",
+            spend: Math.round(row.metrics.cost_micros / 1000000) || 0,
+            conversions: row.metrics.conversions || 0,
+            impressions: row.metrics.impressions || 0,
+            clicks: row.metrics.clicks || 0,
+            ctr: (row.metrics.ctr * 100).toFixed(2) + '%',
+            averageCpc: 'Rp ' + Math.round(row.metrics.average_cpc / 1000000).toLocaleString('id-ID'),
+            conversionsFromInteractionsRate: (row.metrics.conversions_from_interactions_rate * 100).toFixed(2) + '%',
+            tanggal: row.segments.date,
+          }));
+      }
+
+      let allCampaigns: any[] = [];
+      let fetchError: any = null;
+
+      // Try direct fetch first
+      try {
+        allCampaigns = await fetchCampaignsForCustomer(cleanCustomerId, (cleanMccId && cleanMccId !== cleanCustomerId) ? cleanMccId : undefined);
+      } catch (err: any) {
+        // If it's a manager account error, try fetching sub-accounts
+        const errStr = JSON.stringify(err).toLowerCase();
+        const errMsg = (err.message || "").toLowerCase();
+        
+        let isManagerError = 
+          errMsg.includes("manager account") || 
+          errStr.includes("metrics_cannot_be_requested_for_a_manager_account") ||
+          errStr.includes("manager_account") ||
+          errMsg.includes("separate requests against each client account");
+
+        // Check nested errors array if it exists
+        if (!isManagerError && err.errors && Array.isArray(err.errors)) {
+          for (const e of err.errors) {
+            const m = (e.message || "").toLowerCase();
+            if (m.includes("manager account") || m.includes("separate requests against each client account")) {
+              isManagerError = true;
+              break;
+            }
+          }
+        }
+
+        if (isManagerError) {
+          console.log(`Account ${cleanCustomerId} is a Manager Account (detected from error). Fetching sub-accounts...`);
+          
+          const managerClient = client.Customer({
+            customer_id: cleanCustomerId,
+            login_customer_id: (cleanMccId && cleanMccId !== cleanCustomerId) ? cleanMccId : undefined,
+            refresh_token: cleanRefresh,
+          });
+
+          // Fetch sub-accounts (direct children that are not managers)
+          const subAccounts = await managerClient.query(`
+            SELECT 
+              customer_client.id, 
+              customer_client.descriptive_name, 
+              customer_client.manager 
+            FROM customer_client 
+            WHERE customer_client.level = 1 
+            AND customer_client.manager = false
+            AND customer_client.status = 'ENABLED'
+          `);
+
+          console.log(`Found ${subAccounts.length} sub-accounts for MCC ${cleanCustomerId}`);
+          
+          const batchSize = 5;
+          for (let i = 0; i < subAccounts.length; i += batchSize) {
+            const batch = subAccounts.slice(i, i + batchSize);
+            const batchResults = await Promise.all(batch.map(async (sub: any) => {
+              try {
+                return await fetchCampaignsForCustomer(sub.customer_client.id, cleanCustomerId);
+              } catch (subErr) {
+                console.error(`Failed to fetch campaigns for sub-account ${sub.customer_client.id}:`, subErr);
+                return [];
+              }
+            }));
+            allCampaigns = allCampaigns.concat(...batchResults);
+          }
+        } else {
+          // Re-throw if it's some other error
+          throw err;
+        }
+      }
+
+      res.json({ ok: true, campaigns: allCampaigns });
+    } catch (error: any) {
+      console.error("Google Ads API Error Detail:", error);
+      let errorMsg = "Unknown Google Ads API error";
+      
+      if (typeof error === 'string') {
+        errorMsg = error;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMsg = error.message;
+      } else if (error.errors && error.errors.length > 0) {
+        errorMsg = error.errors[0].message || JSON.stringify(error.errors[0]);
+      } else {
+        try {
+          errorMsg = JSON.stringify(error);
+        } catch (e) {
+          errorMsg = String(error);
+        }
+      }
+
+      if (errorMsg.includes("The caller does not have permission")) {
+        errorMsg = "GAds Error: 'The caller does not have permission'. Ini berarti email Anda tidak punya akses ke akun ini, atau MCC ID (Manager ID) salah/tidak terhubung ke akun ini.";
+      }
+      
+      res.status(500).json({ ok: false, error: errorMsg });
+    }
+  });
+
+  // API Route to test Google Ads connection
+  app.get("/api/google-ads/test", async (req, res) => {
+    try {
+      const CLIENT_ID = process.env.GADS_CLIENT_ID;
+      const CLIENT_SECRET = process.env.GADS_CLIENT_SECRET;
+      const REFRESH_TOKEN = process.env.GADS_REFRESH_TOKEN;
+
+      if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
+        return res.status(500).json({ ok: false, error: "Missing credentials in environment variables." });
+      }
+
+      const cleanId = (CLIENT_ID || "").replace(/\s+/g, '').replace(/^["']|["']$/g, '');
+      const cleanSecret = (CLIENT_SECRET || "").replace(/\s+/g, '').replace(/^["']|["']$/g, '');
+      const cleanRefresh = (REFRESH_TOKEN || "").replace(/\s+/g, '').replace(/^["']|["']$/g, '');
+
+      const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: cleanId,
+          client_secret: cleanSecret,
+          refresh_token: cleanRefresh,
+          grant_type: "refresh_token",
+        }),
+      });
+
+      const tokenData = await tokenResponse.json();
+      if (tokenData.error) {
+        let errorMsg = `OAuth Error: ${tokenData.error} - ${tokenData.error_description || 'No description'}`;
+        if (tokenData.error === 'unauthorized_client') {
+          errorMsg = `Gagal: OAuth Error: unauthorized_client. Detail: ${tokenData.error_description || 'No description'}. Pastikan Anda men-generate Refresh Token menggunakan Client ID yang SAMA dengan yang ada di pengaturan ini.`;
+        } else if (tokenData.error === 'invalid_client') {
+          errorMsg = `Gagal: OAuth Error: invalid_client. Detail: ${tokenData.error_description || 'No description'}. Client ID atau Client Secret salah.`;
+        } else if (tokenData.error === 'invalid_grant') {
+          errorMsg = `Gagal: OAuth Error: invalid_grant. Detail: ${tokenData.error_description || 'No description'}. Refresh token tidak valid atau sudah dicabut.`;
+        }
+        return res.status(401).json({ ok: false, error: errorMsg });
+      }
+
+      res.json({ ok: true, message: "Koneksi berhasil", token_status: "valid" });
+    } catch (error: any) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();

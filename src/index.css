@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-primary: #4f46e5;
+  --color-brand-secondary: #0f172a;
+  --color-brand-success: #10b981;
+  --color-brand-warning: #f59e0b;
+  --color-brand-danger: #ef4444;
+  
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+}
+
+:root {
+  --bg-base: #ffffff;
+  --bg-surface: #fafafa;
+  --bg-subtle: #f5f5f5;
+  --text-base: #171717;
+  --text-muted: #737373;
+  --border-base: #e5e5e5;
+}
+
+.dark {
+  --bg-base: #000000;
+  --bg-surface: #0a0a0a;
+  --bg-subtle: #141414;
+  --text-base: #ededed;
+  --text-muted: #888888;
+  --border-base: #222222;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-base);
+    @apply font-sans text-sm antialiased transition-colors duration-300 selection:bg-indigo-500/30 selection:text-indigo-200;
+  }
+  
+  h1, h2, h3, h4 {
+    @apply tracking-tight font-bold;
+  }
+}
+
+@layer components {
+  .card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-base);
+    @apply rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+  .dark .card {
+    box-shadow: 0 4px 20px -2px rgba(0,0,0,0.5);
+  }
+  .dark .card:hover {
+    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.7);
+    border-color: #333333;
+  }
+  
+  .bento-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-base);
+    @apply rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden;
+  }
+  .dark .bento-card {
+    box-shadow: 0 4px 20px -2px rgba(0,0,0,0.5);
+  }
+  .dark .bento-card:hover {
+    border-color: #333333;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] text-sm;
+  }
+  
+  .btn-primary {
+    @apply bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 hover:shadow-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:shadow-indigo-900/40;
+  }
+  
+  .btn-dark {
+    @apply bg-slate-900 text-white hover:bg-slate-800 shadow-sm dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200;
+  }
+  
+  .btn-wa {
+    @apply bg-[#25D366] text-white hover:bg-[#128C7E] shadow-sm;
+  }
+  
+  .btn-outline {
+    background-color: transparent;
+    color: var(--text-base);
+    border: 1px solid var(--border-base);
+  }
+  .btn-outline:hover {
+    background-color: var(--bg-subtle);
+  }
+  
+  .btn-ghost {
+    color: var(--text-muted);
+  }
+  .btn-ghost:hover {
+    background-color: var(--bg-subtle);
+    color: var(--text-base);
+  }
+
+  .input {
+    background-color: var(--bg-base);
+    border: 1px solid var(--border-base);
+    color: var(--text-base);
+    @apply w-full rounded-xl px-4 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all;
+  }
+  .input::placeholder {
+    color: var(--text-muted);
+  }
+  
+  .label {
+    color: var(--text-muted);
+    @apply text-[11px] font-bold tracking-wider uppercase mb-1.5 block;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-base);
+  @apply rounded-full transition-colors;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-muted);
+}
+
+/* Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}

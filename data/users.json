@@ -1,0 +1,13 @@
+[
+  {
+    "id": "admin",
+    "name": "Admin",
+    "email": "lkbimrbob@gmail.com",
+    "pass": "kayaraya123",
+    "role": "admin",
+    "color": "#2563eb",
+    "initials": "AD",
+    "status": "Aktif",
+    "createdAt": "2026-04-03T08:16:45.000Z"
+  }
+]
