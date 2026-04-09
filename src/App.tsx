@@ -759,11 +759,14 @@ export default function App() {
       if (user) {
         setIsProfileLoading(true);
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as User;
-            setCurrentUser(userData);
-            localStorage.setItem('kayaraya_user', JSON.stringify(userData));
+          // Sync with Express API instead of Firestore
+          const res = await fetch('/api/users');
+          const result = await res.json();
+          const existingUser = result.ok ? result.users.find((u: any) => u.id === user.uid || u.email === user.email) : null;
+
+          if (existingUser) {
+            setCurrentUser(existingUser);
+            localStorage.setItem('kayaraya_user', JSON.stringify(existingUser));
           } else {
             const newUser: User = {
               id: user.uid,
@@ -779,13 +782,20 @@ export default function App() {
               assignedFBAccounts: [],
               assignedGAdsAccounts: []
             };
-            await setDoc(doc(db, 'users', user.uid), newUser);
+            
+            await fetch('/api/users/add', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newUser)
+            });
+
             setCurrentUser(newUser);
             localStorage.setItem('kayaraya_user', JSON.stringify(newUser));
+            fetchUsers();
           }
         } catch (err) {
-          console.error('Error fetching/creating user doc:', err);
-          addToast('Gagal memuat profil user dari database', 'warn');
+          console.error('Error syncing user with Express API:', err);
+          addToast('Gagal sinkronisasi profil user', 'warn');
         } finally {
           setIsProfileLoading(false);
         }
@@ -812,37 +822,44 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [isAuthReady]);
 
-  // Real-time Users Listener
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/users');
+      const result = await res.json();
+      if (result.ok) {
+        setUsers(result.users);
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
+  // Real-time Users Listener (Replaced with polling/manual fetch for Express compatibility)
   useEffect(() => {
     if (!currentUser) return;
-    const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const usersList = snapshot.docs.map(doc => doc.data() as User);
-      setUsers(usersList);
-    }, (error) => {
-      console.error('Users snapshot error:', error);
-      addToast('Gagal sinkronisasi data user', 'warn');
-    });
-    return () => unsubscribe();
+    fetchUsers();
+    const interval = setInterval(fetchUsers, 30000); // Poll every 30s
+    return () => clearInterval(interval);
   }, [currentUser]);
 
-  // Real-time Data Listener
+  const fetchCampaigns = async () => {
+    try {
+      const res = await fetch('/api/data');
+      const result = await res.json();
+      if (result.ok) {
+        setData(result.data);
+      }
+    } catch (err) {
+      console.error('Error fetching campaigns:', err);
+    }
+  };
+
+  // Real-time Data Listener (Replaced with polling/manual fetch for Express compatibility)
   useEffect(() => {
     if (!currentUser) return;
-    const unsubscribe = onSnapshot(collection(db, 'campaigns'), (snapshot) => {
-      const campaigns = snapshot.docs.map(doc => doc.data() as Campaign);
-      const grouped: Record<string, { campaigns: Campaign[] }> = {};
-      campaigns.forEach(c => {
-        if (c.user_id) {
-          if (!grouped[c.user_id]) grouped[c.user_id] = { campaigns: [] };
-          grouped[c.user_id].campaigns.push(c);
-        }
-      });
-      setData(grouped);
-    }, (error) => {
-      console.error('Campaigns snapshot error:', error);
-      addToast('Gagal sinkronisasi data kampanye', 'warn');
-    });
-    return () => unsubscribe();
+    fetchCampaigns();
+    const interval = setInterval(fetchCampaigns, 30000); // Poll every 30s
+    return () => clearInterval(interval);
   }, [currentUser]);
 
   const handleFirebaseLogin = async () => {
@@ -1065,21 +1082,32 @@ export default function App() {
         id: generateLocalId(),
       };
 
-      await setDoc(doc(db, 'users', newUserDoc.id), newUserDoc);
+      const res = await fetch('/api/users/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUserDoc)
+      });
       
-      addToast('User berhasil ditambahkan', 'success');
-      setIsAddingUser(false);
-      setNewUserName('');
-      setNewUserEmail('');
-      setNewUserRole('user');
-      setNewUserWhatsApp('');
-      setNewUserPass('');
-      setNewUserPhotoURL('');
-      setNewUserStatus('Aktif');
-      setNewUserAssignedProducts([]);
-    } catch (error) {
+      const result = await res.json();
+
+      if (result.ok) {
+        addToast('User berhasil ditambahkan', 'success');
+        fetchUsers();
+        setIsAddingUser(false);
+        setNewUserName('');
+        setNewUserEmail('');
+        setNewUserRole('user');
+        setNewUserWhatsApp('');
+        setNewUserPass('');
+        setNewUserPhotoURL('');
+        setNewUserStatus('Aktif');
+        setNewUserAssignedProducts([]);
+      } else {
+        throw new Error(result.error || 'Gagal menambahkan user');
+      }
+    } catch (error: any) {
       console.error("Error adding user:", error);
-      addToast('Gagal menambahkan user', 'warn');
+      addToast('Gagal menambahkan user: ' + error.message, 'warn');
     } finally {
       setIsSavingUser(false);
     }
@@ -1088,9 +1116,19 @@ export default function App() {
   const handleUpdateUserAdmin = async (userId: string, updates: Partial<User>) => {
     setIsSavingUser(true);
     try {
-      await updateDoc(doc(db, 'users', userId), updates);
-      addToast('User berhasil diperbarui', 'success');
-      setEditingUser(null);
+      const res = await fetch('/api/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, ...updates })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        addToast('User berhasil diperbarui', 'success');
+        fetchUsers();
+        setEditingUser(null);
+      } else {
+        throw new Error(result.error || 'Gagal memperbarui user');
+      }
     } catch (error: any) {
       console.error("Error updating user:", error);
       addToast('Gagal memperbarui user: ' + error.message, 'warn');
@@ -1102,11 +1140,21 @@ export default function App() {
   const handleDeleteUser = async (userId: string) => {
     if (!window.confirm('Apakah Anda yakin ingin menghapus user ini?')) return;
     try {
-      await updateDoc(doc(db, 'users', userId), { status: 'Nonaktif' });
-      addToast('User dinonaktifkan');
+      const res = await fetch('/api/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, status: 'Nonaktif' })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        addToast('User dinonaktifkan');
+        fetchUsers();
+      } else {
+        throw new Error(result.error || 'Gagal menghapus user');
+      }
     } catch (error: any) {
       console.error("Error deleting user:", error);
-      addToast('Gagal menghapus user');
+      addToast('Gagal menghapus user: ' + error.message, 'warn');
     }
   };
 
@@ -1583,18 +1631,22 @@ export default function App() {
     try {
       const merged = [...newCampaigns];
 
-      // Save to Firestore
-      const batch = merged.map(async (c) => {
-        const campaignId = String(c.id || generateLocalId());
-        try {
-          await setDoc(doc(db, 'campaigns', campaignId), { ...c, id: campaignId });
-        } catch (err) {
-          console.error(`Error saving campaign ${campaignId}:`, err);
-          throw err;
-        }
+      // Save to Express API instead of Firestore
+      const groupedByUserId: Record<string, Campaign[]> = {};
+      merged.forEach(c => {
+        if (!groupedByUserId[c.user_id]) groupedByUserId[c.user_id] = [];
+        groupedByUserId[c.user_id].push(c);
       });
-      await Promise.all(batch);
+
+      for (const [userId, userCamps] of Object.entries(groupedByUserId)) {
+        await fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, campaigns: userCamps })
+        });
+      }
       
+      fetchCampaigns();
       addToast(`Berhasil mengimport ${rawData.length} kampanye`);
       const fbToDateRange: Record<string, string> = {
         'today': 'today',

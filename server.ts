@@ -186,6 +186,29 @@ async function startServer() {
     }
   });
 
+  app.post("/api/users/add", async (req, res) => {
+    try {
+      const newUser = req.body;
+      if (!newUser.email) {
+        return res.status(400).json({ ok: false, error: "Email wajib diisi" });
+      }
+
+      if (memoryUsers.find((u: any) => u.email.toLowerCase() === newUser.email.toLowerCase())) {
+        return res.status(400).json({ ok: false, error: "Email sudah terdaftar" });
+      }
+
+      memoryUsers.push(newUser);
+      try {
+        await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
+      } catch (e) {}
+      
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Add user error:", err);
+      res.status(500).json({ ok: false, error: "Server error" });
+    }
+  });
+
   app.post("/api/users/update", async (req, res) => {
     try {
       const updatedUser = req.body;
