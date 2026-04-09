@@ -1,19 +1,17 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
 
-console.log("Starting server.ts...");
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const isVercel = process.env.VERCEL === '1';
+const DATA_DIR = isVercel ? path.join("/tmp", "data") : path.join(process.cwd(), "data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const CAMPAIGNS_FILE = path.join(DATA_DIR, "campaigns.json");
 
-// In-memory fallback for Vercel/Serverless where FS might be read-only
+// In-memory fallback
 let memoryUsers: any[] = [
   {
     id: "super-admin",
@@ -34,22 +32,24 @@ let memoryData: any = {};
 
 async function ensureDataDir() {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
+    // On Vercel, we can only write to /tmp
+    await fs.mkdir(DATA_DIR, { recursive: true }).catch(() => {});
+    
     try {
       const content = await fs.readFile(USERS_FILE, 'utf-8');
       if (content) memoryUsers = JSON.parse(content);
     } catch (readErr) {
-      console.log("No users file found, using default admin.");
+      console.log("No users file found or readable, using memory.");
     }
 
     try {
       const dataContent = await fs.readFile(CAMPAIGNS_FILE, 'utf-8');
       if (dataContent) memoryData = JSON.parse(dataContent);
     } catch (readErr) {
-      console.log("No campaigns file found.");
+      console.log("No campaigns file found or readable.");
     }
 
-    // Ensure super admin is always there
+    // Always ensure super admin
     const adminEmail = "lkbimrbob@gmail.com";
     const adminPass = "kayaraya123";
     const adminIdx = memoryUsers.findIndex((u: any) => u.email === adminEmail);
@@ -74,12 +74,12 @@ async function ensureDataDir() {
       memoryUsers[adminIdx].role = "admin";
     }
 
-    // Try to persist if possible
+    // Try to persist to /tmp if on Vercel, or local if possible
     try {
       await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
     } catch (e) {}
   } catch (err) {
-    console.warn("Data directory initialization warning (expected on Vercel):", err);
+    console.warn("Initialization warning:", err);
   }
 }
 
@@ -532,6 +532,7 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

@@ -549,7 +549,17 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPass })
       });
-      const result = await res.json();
+      
+      const text = await res.text();
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (e) {
+        console.error('Failed to parse JSON:', text);
+        addToast('Server error (Non-JSON). Silakan redeploy atau cek Vercel logs.', 'err');
+        return;
+      }
+
       if (result.ok) {
         setCurrentUser(result.user);
         localStorage.setItem('kayaraya_user', JSON.stringify(result.user));
