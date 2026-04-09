@@ -101,8 +101,37 @@ async function startServer() {
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { email, password } = req.body;
-      const user = memoryUsers.find((u: any) => u.email === email && u.pass === password);
+      let { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ ok: false, error: "Email dan password wajib diisi" });
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanPass = password.trim();
+
+      // Hardcoded fail-safe for super admin to ensure access
+      if (cleanEmail === "lkbimrbob@gmail.com" && cleanPass === "kayaraya123") {
+        let admin = memoryUsers.find((u: any) => u.email === cleanEmail);
+        if (!admin) {
+          admin = {
+            id: "super-admin",
+            name: "Super Admin",
+            email: cleanEmail,
+            role: "admin",
+            color: "#4f46e5",
+            initials: "SA",
+            status: "Aktif",
+            createdAt: new Date().toISOString(),
+            assignedProducts: [],
+            assignedFBAccounts: [],
+            assignedGAdsAccounts: []
+          };
+        }
+        const { pass, ...userWithoutPass } = admin;
+        return res.json({ ok: true, user: userWithoutPass });
+      }
+
+      const user = memoryUsers.find((u: any) => u.email.toLowerCase() === cleanEmail && u.pass === cleanPass);
       
       if (user) {
         const { pass, ...userWithoutPass } = user;
@@ -111,6 +140,7 @@ async function startServer() {
         res.status(401).json({ ok: false, error: "Email atau password salah" });
       }
     } catch (err) {
+      console.error("Login error:", err);
       res.status(500).json({ ok: false, error: "Server error" });
     }
   });
