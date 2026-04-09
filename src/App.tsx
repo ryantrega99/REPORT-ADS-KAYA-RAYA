@@ -560,7 +560,12 @@ export default function App() {
         addToast(result.error || 'Login gagal', 'warn');
       }
     } catch (err) {
-      addToast('Terjadi kesalahan koneksi', 'warn');
+      console.error('Login error:', err);
+      if (err instanceof Error) {
+        addToast(`Kesalahan: ${err.message}`, 'warn');
+      } else {
+        addToast('Terjadi kesalahan koneksi ke server.', 'warn');
+      }
     } finally {
       setIsLoggingIn(false);
     }

@@ -9,27 +9,53 @@ console.log("Starting server.ts...");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = path.join(__dirname, "data");
+const DATA_DIR = path.join(process.cwd(), "data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const CAMPAIGNS_FILE = path.join(DATA_DIR, "campaigns.json");
+
+// In-memory fallback for Vercel/Serverless where FS might be read-only
+let memoryUsers: any[] = [
+  {
+    id: "super-admin",
+    name: "Super Admin",
+    email: "lkbimrbob@gmail.com",
+    pass: "kayaraya123",
+    role: "admin",
+    color: "#4f46e5",
+    initials: "SA",
+    status: "Aktif",
+    createdAt: new Date().toISOString(),
+    assignedProducts: [],
+    assignedFBAccounts: [],
+    assignedGAdsAccounts: []
+  }
+];
+let memoryData: any = {};
 
 async function ensureDataDir() {
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
-    let users = [];
     try {
       const content = await fs.readFile(USERS_FILE, 'utf-8');
-      users = JSON.parse(content);
-    } catch {
-      users = [];
+      if (content) memoryUsers = JSON.parse(content);
+    } catch (readErr) {
+      console.log("No users file found, using default admin.");
     }
 
+    try {
+      const dataContent = await fs.readFile(CAMPAIGNS_FILE, 'utf-8');
+      if (dataContent) memoryData = JSON.parse(dataContent);
+    } catch (readErr) {
+      console.log("No campaigns file found.");
+    }
+
+    // Ensure super admin is always there
     const adminEmail = "lkbimrbob@gmail.com";
     const adminPass = "kayaraya123";
-    const adminIdx = users.findIndex((u: any) => u.email === adminEmail);
+    const adminIdx = memoryUsers.findIndex((u: any) => u.email === adminEmail);
 
     if (adminIdx === -1) {
-      users.push({
+      memoryUsers.push({
         id: "super-admin",
         name: "Super Admin",
         email: adminEmail,
@@ -44,19 +70,16 @@ async function ensureDataDir() {
         assignedGAdsAccounts: []
       });
     } else {
-      users[adminIdx].pass = adminPass;
-      users[adminIdx].role = "admin";
-      users[adminIdx].status = "Aktif";
+      memoryUsers[adminIdx].pass = adminPass;
+      memoryUsers[adminIdx].role = "admin";
     }
 
+    // Try to persist if possible
     try {
-      await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-      await fs.access(CAMPAIGNS_FILE).catch(() => fs.writeFile(CAMPAIGNS_FILE, JSON.stringify({})));
-    } catch (writeErr) {
-      console.warn("Warning: Local file storage is not available. Data will not persist across restarts.", writeErr);
-    }
+      await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
+    } catch (e) {}
   } catch (err) {
-    console.error("Failed to initialize data directory:", err);
+    console.warn("Data directory initialization warning (expected on Vercel):", err);
   }
 }
 
@@ -79,8 +102,7 @@ async function startServer() {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
-      const users = JSON.parse(await fs.readFile(USERS_FILE, "utf-8"));
-      const user = users.find((u: any) => u.email === email && u.pass === password);
+      const user = memoryUsers.find((u: any) => u.email === email && u.pass === password);
       
       if (user) {
         const { pass, ...userWithoutPass } = user;
@@ -96,9 +118,8 @@ async function startServer() {
   app.post("/api/auth/register", async (req, res) => {
     try {
       const { name, email, password } = req.body;
-      const users = JSON.parse(await fs.readFile(USERS_FILE, "utf-8"));
       
-      if (users.find((u: any) => u.email === email)) {
+      if (memoryUsers.find((u: any) => u.email === email)) {
         return res.status(400).json({ ok: false, error: "Email sudah terdaftar" });
       }
 
@@ -107,15 +128,17 @@ async function startServer() {
         name,
         email,
         pass: password,
-        role: users.length === 0 ? "admin" : "user", // First user is admin
+        role: "user",
         color: "#" + Math.floor(Math.random()*16777215).toString(16),
         initials: name.split(" ").map((n: string) => n[0]).join("").toUpperCase(),
         status: "Aktif",
         createdAt: new Date().toISOString()
       };
 
-      users.push(newUser);
-      await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+      memoryUsers.push(newUser);
+      try {
+        await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
+      } catch (e) {}
       
       const { pass, ...userWithoutPass } = newUser;
       res.json({ ok: true, user: userWithoutPass });
@@ -126,8 +149,7 @@ async function startServer() {
 
   app.get("/api/users", async (req, res) => {
     try {
-      const users = JSON.parse(await fs.readFile(USERS_FILE, "utf-8"));
-      const safeUsers = users.map(({ pass, ...u }: any) => u);
+      const safeUsers = memoryUsers.map(({ pass, ...u }: any) => u);
       res.json({ ok: true, users: safeUsers });
     } catch (err) {
       res.status(500).json({ ok: false, error: "Server error" });
@@ -137,14 +159,14 @@ async function startServer() {
   app.post("/api/users/update", async (req, res) => {
     try {
       const updatedUser = req.body;
-      const users = JSON.parse(await fs.readFile(USERS_FILE, "utf-8"));
-      const idx = users.findIndex((u: any) => u.id === updatedUser.id);
+      const idx = memoryUsers.findIndex((u: any) => u.id === updatedUser.id);
       
       if (idx !== -1) {
-        // Preserve password if not provided
-        if (!updatedUser.pass) updatedUser.pass = users[idx].pass;
-        users[idx] = { ...users[idx], ...updatedUser };
-        await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+        if (!updatedUser.pass) updatedUser.pass = memoryUsers[idx].pass;
+        memoryUsers[idx] = { ...memoryUsers[idx], ...updatedUser };
+        try {
+          await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
+        } catch (e) {}
         res.json({ ok: true });
       } else {
         res.status(404).json({ ok: false, error: "User not found" });
@@ -158,8 +180,7 @@ async function startServer() {
 
   app.get("/api/data", async (req, res) => {
     try {
-      const data = JSON.parse(await fs.readFile(CAMPAIGNS_FILE, "utf-8"));
-      res.json({ ok: true, data });
+      res.json({ ok: true, data: memoryData });
     } catch (err) {
       res.status(500).json({ ok: false, error: "Server error" });
     }
@@ -168,9 +189,10 @@ async function startServer() {
   app.post("/api/data", async (req, res) => {
     try {
       const { userId, campaigns } = req.body;
-      const data = JSON.parse(await fs.readFile(CAMPAIGNS_FILE, "utf-8"));
-      data[userId] = { campaigns };
-      await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify(data, null, 2));
+      memoryData[userId] = { campaigns };
+      try {
+        await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify(memoryData, null, 2));
+      } catch (e) {}
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ ok: false, error: "Server error" });
