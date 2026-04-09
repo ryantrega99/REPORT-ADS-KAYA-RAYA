@@ -29,7 +29,6 @@ async function ensureDataDir() {
     const adminIdx = users.findIndex((u: any) => u.email === adminEmail);
 
     if (adminIdx === -1) {
-      // Add super admin if not exists
       users.push({
         id: "super-admin",
         name: "Super Admin",
@@ -45,27 +44,26 @@ async function ensureDataDir() {
         assignedGAdsAccounts: []
       });
     } else {
-      // Ensure existing admin has correct password and role
       users[adminIdx].pass = adminPass;
       users[adminIdx].role = "admin";
       users[adminIdx].status = "Aktif";
     }
 
-    await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-
     try {
-      await fs.access(CAMPAIGNS_FILE);
-    } catch {
-      await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify({}));
+      await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+      await fs.access(CAMPAIGNS_FILE).catch(() => fs.writeFile(CAMPAIGNS_FILE, JSON.stringify({})));
+    } catch (writeErr) {
+      console.warn("Warning: Local file storage is not available. Data will not persist across restarts.", writeErr);
     }
   } catch (err) {
-    console.error("Failed to ensure data directory:", err);
+    console.error("Failed to initialize data directory:", err);
   }
 }
 
+const app = express();
+
 async function startServer() {
   await ensureDataDir();
-  const app = express();
   const PORT = 3000;
 
   app.use(express.json({ limit: '10mb' }));
@@ -531,3 +529,5 @@ async function startServer() {
 }
 
 startServer();
+
+export default app;
