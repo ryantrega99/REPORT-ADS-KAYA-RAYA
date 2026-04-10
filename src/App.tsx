@@ -1417,6 +1417,39 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentUser, fbToken, fbAdvertisers, gadsAdvertisers, googleAccessToken, sheetIds]);
 
+  const saveAutomationConfig = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch('/api/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentUser.id,
+          fbToken,
+          fbAdvertisers,
+          gadsAdvertisers,
+          waToken,
+          waTarget,
+          sheetIds,
+          automationEnabled: true
+        })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        addToast('Automation configuration saved to cloud!');
+        localStorage.setItem('kayaraya_fb_token', fbToken);
+        localStorage.setItem('kayaraya_wa_token', waToken);
+        localStorage.setItem('kayaraya_wa_target', waTarget);
+        localStorage.setItem('kayaraya_fb_advertisers_v2', JSON.stringify(fbAdvertisers));
+        localStorage.setItem('kayaraya_gads_advertisers', JSON.stringify(gadsAdvertisers));
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err: any) {
+      addToast(`Failed to save config: ${err.message}`, 'err');
+    }
+  };
+
   const fetchAdsData = async () => {
     const fbTokenTrimmed = fbToken.trim();
     const fbActiveIds = fbAdvertisers.filter(id => id.trim() !== '');
@@ -2719,6 +2752,7 @@ Total Leads = ${fmtNum(uTotalLeads)}`;
                             placeholder="Fonnte/Wablas Token..." 
                           />
                         </div>
+                        <button onClick={saveAutomationConfig} className="btn btn-primary w-full h-11 mt-4 bg-emerald-600 hover:bg-emerald-700 border-none">Save WA Config</button>
                       </div>
                     </div>
 
@@ -3314,11 +3348,7 @@ Total Leads = ${fmtNum(uTotalLeads)}`;
                           </div>
                         ))}
                       </div>
-                      <button onClick={() => {
-                        localStorage.setItem('kayaraya_fb_token', fbToken);
-                        localStorage.setItem('kayaraya_fb_advertisers_v2', JSON.stringify(fbAdvertisers));
-                        addToast('Meta credentials saved');
-                      }} className="btn btn-primary w-full h-11 mt-4">Save Meta Config</button>
+                      <button onClick={saveAutomationConfig} className="btn btn-primary w-full h-11 mt-4">Save Meta Config</button>
                     </div>
                   </div>
 
@@ -3362,8 +3392,7 @@ Total Leads = ${fmtNum(uTotalLeads)}`;
                         </p>
                       </div>
                       <button onClick={() => {
-                        localStorage.setItem('kayaraya_gads_advertisers', JSON.stringify(gadsAdvertisers));
-                        addToast('Google Ads CID saved');
+                        saveAutomationConfig();
                         testGadsConnection();
                       }} className="btn btn-primary w-full h-11 mt-4 bg-red-600 hover:bg-red-700 border-none">Save & Test Connection</button>
                     </div>

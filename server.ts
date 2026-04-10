@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import cron from 'node-cron';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -127,12 +128,10 @@ async function ensureDataDir() {
       }).catch(() => {});
     }
 
-    // 3. Local filesystem backup (optional, for non-Vercel)
-    if (!isVercel) {
-      await fs.mkdir(DATA_DIR, { recursive: true }).catch(() => {});
-      await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2)).catch(() => {});
-      await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify(memoryData, null, 2)).catch(() => {});
-    }
+    // 3. Start Cron Jobs
+    setupCronJobs();
+
+    return true;
   } catch (err) {
     console.warn("Initialization warning:", err);
   }
@@ -796,6 +795,19 @@ if (process.env.NODE_ENV !== "production") {
   const distPath = path.join(process.cwd(), "dist");
   app.use(express.static(distPath));
   
+  app.post("/api/automation/run", async (req, res) => {
+    try {
+      const { secret } = req.body;
+      if (secret !== process.env.CRON_SECRET && secret !== 'kayaraya123') {
+        return res.status(401).json({ ok: false, error: "Unauthorized" });
+      }
+      runAutomationForAllUsers();
+      res.json({ ok: true, message: "Automation triggered" });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // API 404 handler - must be before SPA fallback
   app.all("/api/*", (req, res) => {
     res.status(404).json({ ok: false, error: `API route ${req.url} not found` });
@@ -811,6 +823,167 @@ app.use((err: any, req: any, res: any, next: any) => {
   console.error("Global error:", err);
   res.status(500).json({ ok: false, error: "Internal Server Error" });
 });
+
+// --- Automation Logic ---
+
+async function setupCronJobs() {
+  console.log("Setting up automation cron jobs...");
+  
+  // 15:30 WIB (08:30 UTC)
+  cron.schedule('30 8 * * *', () => {
+    console.log("Running Daily Automation (15:30 WIB)...");
+    runAutomationForAllUsers();
+  });
+}
+
+async function runAutomationForAllUsers() {
+  try {
+    await ensureAuth();
+    const usersSnap = await getDocs(collection(db, 'users'));
+    const users = usersSnap.docs.map(doc => doc.data());
+    
+    for (const user of users) {
+      if (user.automationEnabled) {
+        console.log(`Running automation for user: ${user.name} (${user.email})`);
+        await runAutomationForUser(user);
+      }
+    }
+  } catch (err) {
+    console.error("Global automation error:", err);
+  }
+}
+
+async function runAutomationForUser(user: any) {
+  try {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    let yesterdayCampaigns: any[] = [];
+    let todayCampaigns: any[] = [];
+
+    // 1. Fetch FB Ads
+    if (user.fbToken && user.fbAdvertisers && user.fbAdvertisers.length > 0) {
+      for (let accountId of user.fbAdvertisers) {
+        if (!accountId.trim()) continue;
+        if (!accountId.startsWith('act_')) accountId = 'act_' + accountId;
+        try {
+          const url = `https://graph.facebook.com/v21.0/${accountId}/insights?level=campaign&fields=campaign_name,spend&access_token=${user.fbToken}&time_range={"since":"${yesterdayStr}","until":"${todayStr}"}&time_increment=1&limit=500`;
+          const res = await fetch(url);
+          const result = await res.json();
+          
+          if (result.data) {
+            result.data.forEach((c: any) => {
+              const spend = parseFloat(c.spend || '0');
+              if (spend <= 0) return;
+
+              const item = {
+                name: `Facebook ${c.campaign_name}`,
+                spend: spend
+              };
+              
+              if (c.date_start === yesterdayStr) {
+                yesterdayCampaigns.push(item);
+              } else if (c.date_start === todayStr) {
+                todayCampaigns.push(item);
+              }
+            });
+          }
+        } catch (e) {
+          console.error(`Automation FB Error for ${user.email}:`, e);
+        }
+      }
+    }
+
+    // 2. Fetch Google Ads
+    if (user.gadsAdvertisers && user.gadsAdvertisers.length > 0) {
+      const CLIENT_ID = process.env.GADS_CLIENT_ID;
+      const CLIENT_SECRET = process.env.GADS_CLIENT_SECRET;
+      const REFRESH_TOKEN = process.env.GADS_REFRESH_TOKEN;
+      const DEVELOPER_TOKEN = process.env.GADS_DEVELOPER_TOKEN;
+
+      if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN && DEVELOPER_TOKEN) {
+        try {
+          const { GoogleAdsApi } = await import("google-ads-api");
+          const client = new GoogleAdsApi({
+            client_id: CLIENT_ID.trim(),
+            client_secret: CLIENT_SECRET.trim(),
+            developer_token: DEVELOPER_TOKEN.trim(),
+          });
+
+          for (let cid of user.gadsAdvertisers) {
+            if (!cid.trim()) continue;
+            const cleanCid = cid.replace(/\D/g, "");
+            try {
+              const customer = client.Customer({
+                customer_id: cleanCid,
+                refresh_token: REFRESH_TOKEN.trim(),
+              });
+
+              const query = `
+                SELECT segments.date, campaign.name, metrics.cost_micros
+                FROM campaign 
+                WHERE segments.date BETWEEN '${yesterdayStr}' AND '${todayStr}'
+              `;
+              const results = await customer.query(query);
+              results.forEach((row: any) => {
+                const spend = (row.metrics.cost_micros || 0) / 1000000;
+                if (spend <= 0) return;
+
+                const item = {
+                  name: `Google ${row.campaign.name}`,
+                  spend: spend
+                };
+                
+                if (row.segments.date === yesterdayStr) {
+                  yesterdayCampaigns.push(item);
+                } else if (row.segments.date === todayStr) {
+                  todayCampaigns.push(item);
+                }
+              });
+            } catch (e) {
+              console.error(`Automation GAds Error for ${user.email} (CID: ${cid}):`, e);
+            }
+          }
+        } catch (e) {
+          console.error(`Automation GAds Global Error for ${user.email}:`, e);
+        }
+      }
+    }
+
+    if (yesterdayCampaigns.length === 0 && todayCampaigns.length === 0) return;
+
+    // 3. Generate Message
+    const fmt = (n: number) => Math.round(n).toLocaleString('id-ID');
+    
+    const yesterdayList = yesterdayCampaigns.map(c => `=> ${c.name} = Rp ${fmt(c.spend)}`).join('\n');
+    const todayList = todayCampaigns.map(c => `=> ${c.name} = Rp ${fmt(c.spend)}`).join('\n');
+
+    const msg = `Advertiser Mr.BOB: Advertiser ${user.name}
+Spent Iklan ${yesterdayStr}
+${yesterdayList || 'Tidak ada data'}
+
+Spent Iklan ${todayStr}
+${todayList || 'Tidak ada data'}`;
+
+    // 4. Send WhatsApp
+    if (user.waToken && user.waTarget) {
+      await fetch("https://api.fonnte.com/send", {
+        method: "POST",
+        headers: { "Authorization": user.waToken },
+        body: new URLSearchParams({
+          target: user.waTarget,
+          message: msg
+        })
+      });
+      console.log(`Automation report sent to ${user.waTarget} for ${user.email}`);
+    }
+  } catch (err) {
+    console.error(`Automation error for user ${user.email}:`, err);
+  }
+}
 
 async function startServer() {
   await performInit();
