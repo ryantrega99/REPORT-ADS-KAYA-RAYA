@@ -47,5 +47,10 @@ service cloud.firestore {
       allow update: if isAuthenticated() && isValidCampaign(request.resource.data);
       allow delete: if isAdmin();
     }
+
+    match /campaigns_data/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isOwner(userId);
+    }
   }
 }

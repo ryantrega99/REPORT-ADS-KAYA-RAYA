@@ -2,60 +2,71 @@ import express from "express";
 import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where } from 'firebase/firestore';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Import Firebase config
+const firebaseConfig = JSON.parse(await fs.readFile(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf-8'));
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
+
+// Sign in server to allow Firestore writes
+const adminEmail = "lkbimrbob@gmail.com";
+const adminPass = "kayaraya123";
+
+try {
+  await signInWithEmailAndPassword(auth, adminEmail, adminPass);
+  console.log("Server signed in to Firebase successfully.");
+} catch (err) {
+  console.error("Server failed to sign in to Firebase:", err);
+}
 
 const isVercel = process.env.VERCEL === '1';
 const DATA_DIR = isVercel ? path.join("/tmp", "data") : path.join(process.cwd(), "data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const CAMPAIGNS_FILE = path.join(DATA_DIR, "campaigns.json");
 
-// In-memory fallback
-let memoryUsers: any[] = [
-  {
-    id: "super-admin",
-    name: "Super Admin",
-    email: "lkbimrbob@gmail.com",
-    pass: "kayaraya123",
-    role: "admin",
-    color: "#4f46e5",
-    initials: "SA",
-    status: "Aktif",
-    createdAt: new Date().toISOString(),
-    assignedProducts: [],
-    assignedFBAccounts: [],
-    assignedGAdsAccounts: []
-  }
-];
+// In-memory cache (synced with Firestore)
+let memoryUsers: any[] = [];
 let memoryData: any = {};
 
 async function ensureDataDir() {
   try {
-    // On Vercel, we can only write to /tmp
-    await fs.mkdir(DATA_DIR, { recursive: true }).catch(() => {});
-    
+    // 1. Load from Firestore (Primary Source)
     try {
-      const content = await fs.readFile(USERS_FILE, 'utf-8');
-      if (content) memoryUsers = JSON.parse(content);
-    } catch (readErr) {
-      console.log("No users file found or readable, using memory.");
+      const usersSnap = await getDocs(collection(db, 'users'));
+      memoryUsers = usersSnap.docs.map(doc => doc.data());
+      console.log(`Loaded ${memoryUsers.length} users from Firestore.`);
+    } catch (err) {
+      console.error("Error loading users from Firestore:", err);
     }
 
     try {
-      const dataContent = await fs.readFile(CAMPAIGNS_FILE, 'utf-8');
-      if (dataContent) memoryData = JSON.parse(dataContent);
-    } catch (readErr) {
-      console.log("No campaigns file found or readable.");
+      const campaignsSnap = await getDocs(collection(db, 'campaigns'));
+      const campaigns = campaignsSnap.docs.map(doc => doc.data());
+      campaigns.forEach((c: any) => {
+        if (c.user_id) {
+          if (!memoryData[c.user_id]) memoryData[c.user_id] = { campaigns: [] };
+          memoryData[c.user_id].campaigns.push(c);
+        }
+      });
+      console.log(`Loaded ${campaigns.length} campaigns from Firestore.`);
+    } catch (err) {
+      console.error("Error loading campaigns from Firestore:", err);
     }
 
-    // Always ensure super admin
+    // 2. Always ensure super admin
     const adminEmail = "lkbimrbob@gmail.com";
     const adminPass = "kayaraya123";
     const adminIdx = memoryUsers.findIndex((u: any) => u.email === adminEmail);
 
     if (adminIdx === -1) {
-      memoryUsers.push({
+      const superAdmin = {
         id: "super-admin",
         name: "Super Admin",
         email: adminEmail,
@@ -68,16 +79,25 @@ async function ensureDataDir() {
         assignedProducts: [],
         assignedFBAccounts: [],
         assignedGAdsAccounts: []
-      });
+      };
+      memoryUsers.push(superAdmin);
+      await setDoc(doc(db, 'users', 'super-admin'), superAdmin);
     } else {
       memoryUsers[adminIdx].pass = adminPass;
       memoryUsers[adminIdx].role = "admin";
+      // Update Firestore if needed
+      await updateDoc(doc(db, 'users', memoryUsers[adminIdx].id), { 
+        pass: adminPass, 
+        role: "admin" 
+      }).catch(() => {});
     }
 
-    // Try to persist to /tmp if on Vercel, or local if possible
-    try {
-      await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
-    } catch (e) {}
+    // 3. Local filesystem backup (optional, for non-Vercel)
+    if (!isVercel) {
+      await fs.mkdir(DATA_DIR, { recursive: true }).catch(() => {});
+      await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2)).catch(() => {});
+      await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify(memoryData, null, 2)).catch(() => {});
+    }
   } catch (err) {
     console.warn("Initialization warning:", err);
   }
@@ -166,6 +186,10 @@ async function startServer() {
       };
 
       memoryUsers.push(newUser);
+      
+      // Persist to Firestore
+      await setDoc(doc(db, 'users', newUser.id), newUser);
+
       try {
         await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
       } catch (e) {}
@@ -198,6 +222,10 @@ async function startServer() {
       }
 
       memoryUsers.push(newUser);
+      
+      // Persist to Firestore
+      await setDoc(doc(db, 'users', newUser.id), newUser);
+
       try {
         await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
       } catch (e) {}
@@ -217,6 +245,10 @@ async function startServer() {
       if (idx !== -1) {
         if (!updatedUser.pass) updatedUser.pass = memoryUsers[idx].pass;
         memoryUsers[idx] = { ...memoryUsers[idx], ...updatedUser };
+        
+        // Persist to Firestore
+        await setDoc(doc(db, 'users', updatedUser.id), memoryUsers[idx]);
+
         try {
           await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
         } catch (e) {}
@@ -243,6 +275,13 @@ async function startServer() {
     try {
       const { userId, campaigns } = req.body;
       memoryData[userId] = { campaigns };
+      
+      // Persist to Firestore (Individual campaigns)
+      for (const c of campaigns) {
+        const campaignId = String(c.id || Math.random().toString(36).substring(2, 9));
+        await setDoc(doc(db, 'campaigns', campaignId), { ...c, id: campaignId });
+      }
+
       try {
         await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify(memoryData, null, 2));
       } catch (e) {}
