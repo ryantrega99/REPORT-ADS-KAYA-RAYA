@@ -11,6 +11,8 @@ const __dirname = path.dirname(__filename);
 
 let db: any;
 let auth: any;
+let isInitialized = false;
+let initPromise: Promise<void> | null = null;
 
 const isVercel = process.env.VERCEL === '1';
 const DATA_DIR = isVercel ? path.join("/tmp", "data") : path.join(process.cwd(), "data");
@@ -30,6 +32,8 @@ async function initFirebase() {
     db = getFirestore(firebaseApp);
     auth = getAuth(firebaseApp);
 
+    console.log("Firebase initialized successfully.");
+
     // Sign in server to allow Firestore writes
     const adminEmail = "lkbimrbob@gmail.com";
     const adminPass = "kayaraya123";
@@ -38,7 +42,7 @@ async function initFirebase() {
       await signInWithEmailAndPassword(auth, adminEmail, adminPass);
       console.log("Server signed in to Firebase successfully.");
     } catch (err) {
-      console.error("Server failed to sign in to Firebase:", err);
+      console.warn("Server failed to sign in to Firebase (this is expected if Email/Pass auth is not enabled):", err);
     }
     return true;
   } catch (err) {
@@ -50,6 +54,7 @@ async function initFirebase() {
 async function ensureDataDir() {
   if (!db) return;
   try {
+    console.log("Loading data from Firestore...");
     // 1. Load from Firestore (Primary Source)
     try {
       const usersSnap = await getDocs(collection(db, 'users'));
@@ -62,6 +67,7 @@ async function ensureDataDir() {
     try {
       const campaignsSnap = await getDocs(collection(db, 'campaigns'));
       const campaigns = campaignsSnap.docs.map(doc => doc.data());
+      memoryData = {}; // Reset before reload
       campaigns.forEach((c: any) => {
         if (c.user_id) {
           if (!memoryData[c.user_id]) memoryData[c.user_id] = { campaigns: [] };
@@ -95,6 +101,7 @@ async function ensureDataDir() {
       };
       memoryUsers.push(superAdmin);
       await setDoc(doc(db, 'users', 'super-admin'), superAdmin);
+      console.log("Super Admin created in Firestore.");
     } else {
       memoryUsers[adminIdx].pass = adminPass;
       memoryUsers[adminIdx].role = "admin";
@@ -116,14 +123,35 @@ async function ensureDataDir() {
   }
 }
 
+async function performInit() {
+  if (isInitialized) return;
+  if (initPromise) return initPromise;
+  
+  initPromise = (async () => {
+    await initFirebase();
+    await ensureDataDir();
+    isInitialized = true;
+    initPromise = null;
+  })();
+  
+  return initPromise;
+}
+
 const app = express();
 
 async function startServer() {
-  await initFirebase();
-  await ensureDataDir();
+  await performInit();
   const PORT = 3000;
 
   app.use(express.json({ limit: '10mb' }));
+
+  // Middleware to ensure initialization
+  app.use(async (req, res, next) => {
+    if (!isInitialized) {
+      await performInit();
+    }
+    next();
+  });
 
   // Logging middleware
   app.use((req, res, next) => {
@@ -136,6 +164,8 @@ async function startServer() {
   app.post("/api/auth/login", async (req, res) => {
     try {
       let { email, password } = req.body;
+      console.log(`Login attempt for: ${email}`);
+      
       if (!email || !password) {
         return res.status(400).json({ ok: false, error: "Email dan password wajib diisi" });
       }
@@ -145,6 +175,7 @@ async function startServer() {
 
       // Hardcoded fail-safe for super admin to ensure access
       if (cleanEmail === "lkbimrbob@gmail.com" && cleanPass === "kayaraya123") {
+        console.log("Super Admin hardcoded login successful.");
         let admin = memoryUsers.find((u: any) => u.email === cleanEmail);
         if (!admin) {
           admin = {
@@ -165,12 +196,15 @@ async function startServer() {
         return res.json({ ok: true, user: userWithoutPass });
       }
 
+      console.log(`Checking memoryUsers (count: ${memoryUsers.length}) for user...`);
       const user = memoryUsers.find((u: any) => u.email.toLowerCase() === cleanEmail && u.pass === cleanPass);
       
       if (user) {
+        console.log(`Login successful for user: ${email}`);
         const { pass, ...userWithoutPass } = user;
         res.json({ ok: true, user: userWithoutPass });
       } else {
+        console.log(`Login failed for user: ${email}. User not found or password incorrect.`);
         res.status(401).json({ ok: false, error: "Email atau password salah" });
       }
     } catch (err) {
