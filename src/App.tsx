@@ -1138,16 +1138,16 @@ export default function App() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus user ini?')) return;
+    if (!window.confirm('Apakah Anda yakin ingin menghapus user ini secara permanen?')) return;
     try {
-      const res = await fetch('/api/users/update', {
+      const res = await fetch('/api/users/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: userId, status: 'Nonaktif' })
+        body: JSON.stringify({ id: userId })
       });
       const result = await res.json();
       if (result.ok) {
-        addToast('User dinonaktifkan');
+        addToast('User berhasil dihapus permanen', 'success');
         fetchUsers();
       } else {
         throw new Error(result.error || 'Gagal menghapus user');

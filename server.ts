@@ -261,6 +261,34 @@ async function startServer() {
     }
   });
 
+  app.post("/api/users/delete", async (req, res) => {
+    try {
+      const { id } = req.body;
+      if (id === "super-admin") {
+        return res.status(400).json({ ok: false, error: "Super Admin tidak bisa dihapus" });
+      }
+
+      const idx = memoryUsers.findIndex((u: any) => u.id === id);
+      if (idx !== -1) {
+        memoryUsers.splice(idx, 1);
+        
+        // Delete from Firestore
+        const { deleteDoc } = await import('firebase/firestore');
+        await deleteDoc(doc(db, 'users', id));
+
+        try {
+          await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
+        } catch (e) {}
+        res.json({ ok: true });
+      } else {
+        res.status(404).json({ ok: false, error: "User not found" });
+      }
+    } catch (err) {
+      console.error("Delete user error:", err);
+      res.status(500).json({ ok: false, error: "Server error" });
+    }
+  });
+
   // --- Campaign Data Management ---
 
   app.get("/api/data", async (req, res) => {
