@@ -5,10 +5,19 @@ import { fileURLToPath } from "url";
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { firebaseConfig } from './src/firebase-config.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const firebaseConfig = {
+  "apiKey": "AIzaSyARd4fFDkeErs-lT71HRlLCWkdvN3RkRQg",
+  "authDomain": "ads-mr-bob-report.firebaseapp.com",
+  "projectId": "ads-mr-bob-report",
+  "storageBucket": "ads-mr-bob-report.firebasestorage.app",
+  "messagingSenderId": "67027368740",
+  "appId": "1:67027368740:web:c695dc7bbf3ae1e8c0d1b1",
+  "measurementId": "G-70D51TPZ85"
+};
 
 let db: any;
 let auth: any;
@@ -26,11 +35,12 @@ let memoryData: any = {};
 
 async function initFirebase() {
   try {
+    console.log("Initializing Firebase with inlined config...");
     const firebaseApp = initializeApp(firebaseConfig);
     db = getFirestore(firebaseApp);
     auth = getAuth(firebaseApp);
 
-    console.log("Firebase initialized successfully using bundled config.");
+    console.log("Firebase initialized successfully.");
 
     // Sign in server to allow Firestore writes
     const adminEmail = "lkbimrbob@gmail.com";
@@ -145,10 +155,15 @@ async function startServer() {
 
   // Middleware to ensure initialization
   app.use(async (req, res, next) => {
-    if (!isInitialized) {
-      await performInit();
+    try {
+      if (!isInitialized) {
+        await performInit();
+      }
+      next();
+    } catch (err) {
+      console.error("Initialization middleware error:", err);
+      res.status(500).json({ ok: false, error: "Server initialization failed" });
     }
-    next();
   });
 
   // Logging middleware
