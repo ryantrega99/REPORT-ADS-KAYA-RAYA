@@ -512,7 +512,7 @@ app.post("/api/users/delete", async (req, res) => {
   // API Route for Google Ads
   app.post("/api/google-ads", async (req, res) => {
     try {
-      const { customerId, dateRange, startDate, endDate } = req.body;
+      const { customerId, dateRange, startDate, endDate, gadsRefreshToken } = req.body;
 
       if (!customerId) {
         return res.status(400).json({ ok: false, error: "Customer ID is required" });
@@ -520,9 +520,11 @@ app.post("/api/users/delete", async (req, res) => {
 
       const CLIENT_ID = process.env.GADS_CLIENT_ID;
       const CLIENT_SECRET = process.env.GADS_CLIENT_SECRET;
-      const REFRESH_TOKEN = process.env.GADS_REFRESH_TOKEN;
       const DEVELOPER_TOKEN = process.env.GADS_DEVELOPER_TOKEN;
       const MCC_ID = process.env.GADS_MCC_ID;
+      
+      // Use user-provided refresh token or fallback to global one
+      const REFRESH_TOKEN = gadsRefreshToken || process.env.GADS_REFRESH_TOKEN;
 
       if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !DEVELOPER_TOKEN) {
         return res.status(500).json({ 
@@ -741,9 +743,10 @@ app.post("/api/users/delete", async (req, res) => {
   // API Route to test Google Ads connection
   app.get("/api/google-ads/test", async (req, res) => {
     try {
+      const { gadsRefreshToken } = req.query;
       const CLIENT_ID = process.env.GADS_CLIENT_ID;
       const CLIENT_SECRET = process.env.GADS_CLIENT_SECRET;
-      const REFRESH_TOKEN = process.env.GADS_REFRESH_TOKEN;
+      const REFRESH_TOKEN = (gadsRefreshToken as string) || process.env.GADS_REFRESH_TOKEN;
 
       if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
         return res.status(500).json({ ok: false, error: "Missing credentials in environment variables." });
@@ -901,8 +904,8 @@ async function runAutomationForUser(user: any) {
     if (user.gadsAdvertisers && user.gadsAdvertisers.length > 0) {
       const CLIENT_ID = process.env.GADS_CLIENT_ID;
       const CLIENT_SECRET = process.env.GADS_CLIENT_SECRET;
-      const REFRESH_TOKEN = process.env.GADS_REFRESH_TOKEN;
       const DEVELOPER_TOKEN = process.env.GADS_DEVELOPER_TOKEN;
+      const REFRESH_TOKEN = user.gadsRefreshToken || process.env.GADS_REFRESH_TOKEN;
 
       if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN && DEVELOPER_TOKEN) {
         try {

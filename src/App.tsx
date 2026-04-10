@@ -37,7 +37,10 @@ import {
   Lock,
   Check,
   Moon,
-  Sun
+  Sun,
+  Zap,
+  Save,
+  ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Campaign, Creative, PRODUCTS } from './types';
@@ -661,6 +664,7 @@ export default function App() {
 
   // Setup State
   const [fbToken, setFbToken] = useState(localStorage.getItem('kayaraya_fb_token') || '');
+  const [gadsRefreshToken, setGadsRefreshToken] = useState(localStorage.getItem('kayaraya_gads_refresh_token') || '');
   const [fbAdvertisers, setFbAdvertisers] = useState<string[]>(() => {
     const saved = localStorage.getItem('kayaraya_fb_advertisers_v2');
     if (saved) {
@@ -1426,6 +1430,7 @@ export default function App() {
         body: JSON.stringify({
           id: currentUser.id,
           fbToken,
+          gadsRefreshToken,
           fbAdvertisers,
           gadsAdvertisers,
           waToken,
@@ -1438,6 +1443,7 @@ export default function App() {
       if (result.ok) {
         addToast('Automation configuration saved to cloud!');
         localStorage.setItem('kayaraya_fb_token', fbToken);
+        localStorage.setItem('kayaraya_gads_refresh_token', gadsRefreshToken);
         localStorage.setItem('kayaraya_wa_token', waToken);
         localStorage.setItem('kayaraya_wa_target', waTarget);
         localStorage.setItem('kayaraya_fb_advertisers_v2', JSON.stringify(fbAdvertisers));
@@ -1563,7 +1569,8 @@ export default function App() {
         for (const id of gadsActiveIds) {
           const payload: any = {
             customerId: id.replace(/\D/g, ''),
-            includePaused: true
+            includePaused: true,
+            gadsRefreshToken: gadsRefreshToken.trim()
           };
           
           if (gadsDatePreset === 'CUSTOM') {
@@ -1728,7 +1735,7 @@ export default function App() {
     }
     addToast(`Menghubungkan ke Google Ads (${cid})...`, 'info');
     try {
-      const res = await fetch('/api/google-ads/test').catch(e => {
+      const res = await fetch(`/api/google-ads/test?gadsRefreshToken=${encodeURIComponent(gadsRefreshToken)}`).catch(e => {
         throw new Error(`Koneksi ke server lokal gagal: ${e.message}`);
       });
       
@@ -3450,6 +3457,11 @@ Total Leads = ${fmtNum(uTotalLeads)}`;
                       </div>
                     </div>
                     <div className="space-y-5">
+                      <div>
+                        <label className="label">Refresh Token (Optional per User)</label>
+                        <input className="input h-11" type="password" value={gadsRefreshToken} onChange={(e) => setGadsRefreshToken(e.target.value)} placeholder="1//0xxxx..." />
+                        <p className="text-[9px] text-[var(--text-muted)] mt-1 italic">Kosongkan jika ingin menggunakan token global dari Admin.</p>
+                      </div>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Customer IDs (Optional)</h4>
                         <button onClick={() => setGadsAdvertisers([...gadsAdvertisers, ''])} className="text-[10px] font-bold text-red-600 flex items-center gap-1 hover:underline">
