@@ -3,28 +3,14 @@ import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Import Firebase config
-const firebaseConfig = JSON.parse(await fs.readFile(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf-8'));
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-const auth = getAuth(firebaseApp);
-
-// Sign in server to allow Firestore writes
-const adminEmail = "lkbimrbob@gmail.com";
-const adminPass = "kayaraya123";
-
-try {
-  await signInWithEmailAndPassword(auth, adminEmail, adminPass);
-  console.log("Server signed in to Firebase successfully.");
-} catch (err) {
-  console.error("Server failed to sign in to Firebase:", err);
-}
+let db: any;
+let auth: any;
 
 const isVercel = process.env.VERCEL === '1';
 const DATA_DIR = isVercel ? path.join("/tmp", "data") : path.join(process.cwd(), "data");
@@ -35,7 +21,34 @@ const CAMPAIGNS_FILE = path.join(DATA_DIR, "campaigns.json");
 let memoryUsers: any[] = [];
 let memoryData: any = {};
 
+async function initFirebase() {
+  try {
+    const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+    const configContent = await fs.readFile(configPath, 'utf-8');
+    const firebaseConfig = JSON.parse(configContent);
+    const firebaseApp = initializeApp(firebaseConfig);
+    db = getFirestore(firebaseApp);
+    auth = getAuth(firebaseApp);
+
+    // Sign in server to allow Firestore writes
+    const adminEmail = "lkbimrbob@gmail.com";
+    const adminPass = "kayaraya123";
+
+    try {
+      await signInWithEmailAndPassword(auth, adminEmail, adminPass);
+      console.log("Server signed in to Firebase successfully.");
+    } catch (err) {
+      console.error("Server failed to sign in to Firebase:", err);
+    }
+    return true;
+  } catch (err) {
+    console.error("Failed to initialize Firebase:", err);
+    return false;
+  }
+}
+
 async function ensureDataDir() {
+  if (!db) return;
   try {
     // 1. Load from Firestore (Primary Source)
     try {
@@ -106,6 +119,7 @@ async function ensureDataDir() {
 const app = express();
 
 async function startServer() {
+  await initFirebase();
   await ensureDataDir();
   const PORT = 3000;
 
@@ -277,7 +291,6 @@ async function startServer() {
         console.log(`User ${deletedUser.email} removed from memory.`);
         
         // Delete from Firestore
-        const { deleteDoc } = await import('firebase/firestore');
         await deleteDoc(doc(db, 'users', id));
         console.log(`User ${id} deleted from Firestore.`);
 
@@ -667,6 +680,12 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
+    
+    // API 404 handler - must be before SPA fallback
+    app.all("/api/*", (req, res) => {
+      res.status(404).json({ ok: false, error: `API route ${req.url} not found` });
+    });
+
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
@@ -674,6 +693,12 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  // Global error handler
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error("Global error:", err);
+    res.status(500).json({ ok: false, error: "Internal Server Error" });
   });
 }
 
