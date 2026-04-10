@@ -172,6 +172,8 @@ app.get("/api/health", (req, res) => {
     ok: true, 
     status: "running", 
     initialized: isInitialized,
+    authenticated: !!auth?.currentUser,
+    userEmail: auth?.currentUser?.email,
     usersCount: memoryUsers.length,
     vercel: isVercel,
     time: new Date().toISOString()
@@ -181,185 +183,221 @@ app.get("/api/health", (req, res) => {
 // --- Auth & User Management ---
 
 app.post("/api/auth/login", async (req, res) => {
-    try {
-      let { email, password } = req.body;
-      console.log(`Login attempt for: ${email}`);
-      
-      if (!email || !password) {
-        return res.status(400).json({ ok: false, error: "Email dan password wajib diisi" });
-      }
-
-      const cleanEmail = email.trim().toLowerCase();
-      const cleanPass = password.trim();
-
-      // Hardcoded fail-safe for super admin to ensure access
-      if (cleanEmail === "lkbimrbob@gmail.com" && cleanPass === "kayaraya123") {
-        console.log("Super Admin hardcoded login successful.");
-        let admin = memoryUsers.find((u: any) => u.email === cleanEmail);
-        if (!admin) {
-          admin = {
-            id: "super-admin",
-            name: "Super Admin",
-            email: cleanEmail,
-            role: "admin",
-            color: "#4f46e5",
-            initials: "SA",
-            status: "Aktif",
-            createdAt: new Date().toISOString(),
-            assignedProducts: [],
-            assignedFBAccounts: [],
-            assignedGAdsAccounts: []
-          };
-        }
-        const { pass, ...userWithoutPass } = admin;
-        return res.json({ ok: true, user: userWithoutPass });
-      }
-
-      console.log(`Checking memoryUsers (count: ${memoryUsers.length}) for user...`);
-      const user = memoryUsers.find((u: any) => u.email.toLowerCase() === cleanEmail && u.pass === cleanPass);
-      
-      if (user) {
-        console.log(`Login successful for user: ${email}`);
-        const { pass, ...userWithoutPass } = user;
-        res.json({ ok: true, user: userWithoutPass });
-      } else {
-        console.log(`Login failed for user: ${email}. User not found or password incorrect.`);
-        res.status(401).json({ ok: false, error: "Email atau password salah" });
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      res.status(500).json({ ok: false, error: "Server error" });
+  try {
+    let { email, password } = req.body;
+    console.log(`Login attempt for: ${email}`);
+    
+    if (!email || !password) {
+      return res.status(400).json({ ok: false, error: "Email dan password wajib diisi" });
     }
-  });
 
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-      const { name, email, password } = req.body;
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim();
+
+    // Hardcoded fail-safe for super admin to ensure access
+    if (cleanEmail === "lkbimrbob@gmail.com" && cleanPass === "kayaraya123") {
+      console.log("Super Admin hardcoded login successful.");
+      // Still try to find in Firestore to get full profile
+      const usersSnap = await getDocs(query(collection(db, 'users'), where("email", "==", cleanEmail)));
+      let admin = usersSnap.docs.length > 0 ? usersSnap.docs[0].data() : null;
       
-      if (memoryUsers.find((u: any) => u.email === email)) {
-        return res.status(400).json({ ok: false, error: "Email sudah terdaftar" });
+      if (!admin) {
+        admin = {
+          id: "super-admin",
+          name: "Super Admin",
+          email: cleanEmail,
+          role: "admin",
+          color: "#4f46e5",
+          initials: "SA",
+          status: "Aktif",
+          createdAt: new Date().toISOString(),
+          assignedProducts: [],
+          assignedFBAccounts: [],
+          assignedGAdsAccounts: []
+        };
       }
+      const { pass, ...userWithoutPass } = admin;
+      return res.json({ ok: true, user: userWithoutPass });
+    }
 
-      const newUser = {
-        id: Math.random().toString(36).substring(2, 9),
-        name,
-        email,
-        pass: password,
-        role: "user",
-        color: "#" + Math.floor(Math.random()*16777215).toString(16),
-        initials: name.split(" ").map((n: string) => n[0]).join("").toUpperCase(),
-        status: "Aktif",
-        createdAt: new Date().toISOString()
-      };
-
-      memoryUsers.push(newUser);
-      
-      // Persist to Firestore
-      await setDoc(doc(db, 'users', newUser.id), newUser);
-
-      try {
-        await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
-      } catch (e) {}
-      
-      const { pass, ...userWithoutPass } = newUser;
+    console.log(`Checking Firestore for user: ${cleanEmail}`);
+    const usersSnap = await getDocs(query(collection(db, 'users'), where("email", "==", cleanEmail)));
+    const user = usersSnap.docs.length > 0 ? usersSnap.docs[0].data() : null;
+    
+    if (user && user.pass === cleanPass) {
+      console.log(`Login successful for user: ${email}`);
+      const { pass, ...userWithoutPass } = user;
       res.json({ ok: true, user: userWithoutPass });
-    } catch (err) {
-      res.status(500).json({ ok: false, error: "Server error" });
+    } else {
+      console.log(`Login failed for user: ${email}. User not found or password incorrect.`);
+      res.status(401).json({ ok: false, error: "Email atau password salah" });
     }
-  });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
 
-  app.get("/api/users", async (req, res) => {
-    try {
-      const safeUsers = memoryUsers.map(({ pass, ...u }: any) => u);
-      res.json({ ok: true, users: safeUsers });
-    } catch (err) {
-      res.status(500).json({ ok: false, error: "Server error" });
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    const usersSnap = await getDocs(query(collection(db, 'users'), where("email", "==", email)));
+    if (usersSnap.docs.length > 0) {
+      return res.status(400).json({ ok: false, error: "Email sudah terdaftar" });
     }
-  });
 
-  app.post("/api/users/add", async (req, res) => {
+    const newUser = {
+      id: Math.random().toString(36).substring(2, 9),
+      name,
+      email,
+      pass: password,
+      role: "user",
+      color: "#" + Math.floor(Math.random()*16777215).toString(16),
+      initials: name.split(" ").map((n: string) => n[0]).join("").toUpperCase(),
+      status: "Aktif",
+      createdAt: new Date().toISOString()
+    };
+
+    // Persist to Firestore
+    await setDoc(doc(db, 'users', newUser.id), newUser);
+    
+    const { pass, ...userWithoutPass } = newUser;
+    res.json({ ok: true, user: userWithoutPass });
+  } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+app.get("/api/users", async (req, res) => {
+  try {
+    const usersSnap = await getDocs(collection(db, 'users'));
+    const users = usersSnap.docs.map(doc => {
+      const { pass, ...u } = doc.data();
+      return u;
+    });
+    res.json({ ok: true, users });
+  } catch (err) {
+    console.error("Get users error:", err);
+    res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+async function ensureAuth() {
+  if (!auth?.currentUser) {
+    console.log("Server not authenticated, attempting sign-in...");
+    const adminEmail = "lkbimrbob@gmail.com";
+    const adminPass = "kayaraya123";
     try {
-      const newUser = req.body;
-      if (!newUser.email) {
-        return res.status(400).json({ ok: false, error: "Email wajib diisi" });
-      }
+      await signInWithEmailAndPassword(auth, adminEmail, adminPass);
+      console.log("Server signed in successfully.");
+      return true;
+    } catch (err) {
+      console.error("Server failed to sign in:", err);
+      return false;
+    }
+  }
+  return true;
+}
 
-      if (memoryUsers.find((u: any) => u.email.toLowerCase() === newUser.email.toLowerCase())) {
-        return res.status(400).json({ ok: false, error: "Email sudah terdaftar" });
-      }
+app.post("/api/users/add", async (req, res) => {
+  try {
+    await ensureAuth();
+    const newUser = req.body;
+    console.log(`Adding new user: ${newUser.email}`);
+    
+    if (!newUser.email) {
+      return res.status(400).json({ ok: false, error: "Email wajib diisi" });
+    }
 
-      memoryUsers.push(newUser);
-      
-      // Persist to Firestore
+    const usersSnap = await getDocs(query(collection(db, 'users'), where("email", "==", newUser.email)));
+    if (usersSnap.docs.length > 0) {
+      return res.status(400).json({ ok: false, error: "Email sudah terdaftar" });
+    }
+
+    // Persist to Firestore
+    try {
       await setDoc(doc(db, 'users', newUser.id), newUser);
-
-      try {
-        await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
-      } catch (e) {}
+      console.log(`User ${newUser.email} added to Firestore.`);
+      
+      // Update memory cache
+      memoryUsers.push(newUser);
       
       res.json({ ok: true });
-    } catch (err) {
-      console.error("Add user error:", err);
-      res.status(500).json({ ok: false, error: "Server error" });
+    } catch (fsErr: any) {
+      console.error("Firestore error adding user:", fsErr);
+      res.status(500).json({ ok: false, error: `Firestore error: ${fsErr.message}. Pastikan Email/Password Auth sudah aktif di Firebase Console.` });
     }
-  });
+  } catch (err: any) {
+    console.error("Add user error:", err);
+    res.status(500).json({ ok: false, error: err.message || "Server error" });
+  }
+});
 
-  app.post("/api/users/update", async (req, res) => {
-    try {
-      const updatedUser = req.body;
-      const idx = memoryUsers.findIndex((u: any) => u.id === updatedUser.id);
-      
-      if (idx !== -1) {
-        if (!updatedUser.pass) updatedUser.pass = memoryUsers[idx].pass;
-        memoryUsers[idx] = { ...memoryUsers[idx], ...updatedUser };
-        
-        // Persist to Firestore
-        await setDoc(doc(db, 'users', updatedUser.id), memoryUsers[idx]);
-
-        try {
-          await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
-        } catch (e) {}
-        res.json({ ok: true });
-      } else {
-        res.status(404).json({ ok: false, error: "User not found" });
-      }
-    } catch (err) {
-      res.status(500).json({ ok: false, error: "Server error" });
+app.post("/api/users/update", async (req, res) => {
+  try {
+    await ensureAuth();
+    const updatedUser = req.body;
+    if (!updatedUser.id) {
+      return res.status(400).json({ ok: false, error: "User ID wajib diisi" });
     }
-  });
 
-  app.post("/api/users/delete", async (req, res) => {
-    try {
-      const { id } = req.body;
-      console.log(`Attempting to delete user with ID: ${id}`);
+    const userRef = doc(db, 'users', updatedUser.id);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      const currentData = userSnap.data();
+      const finalData = { ...currentData, ...updatedUser };
       
-      if (id === "super-admin") {
-        return res.status(400).json({ ok: false, error: "Super Admin tidak bisa dihapus" });
-      }
+      // Persist to Firestore
+      await setDoc(userRef, finalData);
+      res.json({ ok: true });
+    } else {
+      res.status(404).json({ ok: false, error: "User not found" });
+    }
+  } catch (err) {
+    console.error("Update user error:", err);
+    res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
 
-      const idx = memoryUsers.findIndex((u: any) => u.id === id);
-      if (idx !== -1) {
-        const deletedUser = memoryUsers[idx];
-        memoryUsers.splice(idx, 1);
-        console.log(`User ${deletedUser.email} removed from memory.`);
-        
-        // Delete from Firestore
-        await deleteDoc(doc(db, 'users', id));
+app.post("/api/users/delete", async (req, res) => {
+  try {
+    await ensureAuth();
+    const { id } = req.body;
+    console.log(`Attempting to delete user with ID: ${id}`);
+    
+    if (id === "super-admin") {
+      return res.status(400).json({ ok: false, error: "Super Admin tidak bisa dihapus" });
+    }
+
+    const userRef = doc(db, 'users', id);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      // Delete from Firestore
+      try {
+        await deleteDoc(userRef);
         console.log(`User ${id} deleted from Firestore.`);
-
-        try {
-          await fs.writeFile(USERS_FILE, JSON.stringify(memoryUsers, null, 2));
-        } catch (e) {}
+        
+        // Update memory cache
+        memoryUsers = memoryUsers.filter((u: any) => u.id !== id);
+        
         res.json({ ok: true });
-      } else {
-        console.log(`User with ID ${id} not found in memoryUsers.`);
-        res.status(404).json({ ok: false, error: "User not found" });
+      } catch (fsErr: any) {
+        console.error("Firestore error deleting user:", fsErr);
+        res.status(500).json({ ok: false, error: `Firestore error: ${fsErr.message}. Pastikan Email/Password Auth sudah aktif di Firebase Console.` });
       }
-    } catch (err) {
-      console.error("Delete user error:", err);
-      res.status(500).json({ ok: false, error: "Server error" });
+    } else {
+      console.log(`User with ID ${id} not found in Firestore.`);
+      res.status(404).json({ ok: false, error: "User not found" });
     }
-  });
+  } catch (err: any) {
+    console.error("Delete user error:", err);
+    res.status(500).json({ ok: false, error: err.message || "Server error" });
+  }
+});
 
   // --- Campaign Data Management ---
 
