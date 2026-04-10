@@ -37,21 +37,21 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read, list: if isAuthenticated();
       allow create: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data);
       allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /campaigns/{campaignId} {
-      allow read: if isAuthenticated();
+      allow read, list: if isAuthenticated();
       allow create: if isAuthenticated() && isValidCampaign(request.resource.data);
       allow update: if isAuthenticated() && isValidCampaign(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /campaigns_data/{userId} {
-      allow read: if isAuthenticated();
+      allow read, list: if isAuthenticated();
       allow write: if isAdmin() || isOwner(userId);
     }
   }

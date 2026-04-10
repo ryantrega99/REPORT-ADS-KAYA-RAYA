@@ -192,8 +192,16 @@ app.get("/api/health", (req, res) => {
 
 app.post("/api/auth/login", async (req, res) => {
   try {
+    const isAuth = await ensureAuth();
     let { email, password } = req.body;
-    console.log(`Login attempt for: ${email}`);
+    console.log(`Login attempt for: ${email}. Server Auth: ${auth?.currentUser?.email || 'None'}`);
+    
+    if (!isAuth) {
+      return res.status(500).json({ 
+        ok: false, 
+        error: `Server Authentication Failed: ${authError}. Pastikan user 'lkbimrbob@gmail.com' sudah dibuat di Firebase Console > Authentication.` 
+      });
+    }
     
     if (!email || !password) {
       return res.status(400).json({ ok: false, error: "Email dan password wajib diisi" });
@@ -301,8 +309,10 @@ async function ensureAuth() {
     try {
       await signInWithEmailAndPassword(auth, adminEmail, adminPass);
       console.log("Server signed in successfully.");
+      authError = null;
       return true;
-    } catch (err) {
+    } catch (err: any) {
+      authError = err.message;
       console.error("Server failed to sign in:", err);
       return false;
     }
