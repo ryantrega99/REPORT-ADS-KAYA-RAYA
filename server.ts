@@ -146,46 +146,41 @@ async function performInit() {
 }
 
 const app = express();
+app.use(express.json({ limit: '10mb' }));
 
-async function startServer() {
-  await performInit();
-  const PORT = 3000;
-
-  app.use(express.json({ limit: '10mb' }));
-
-  // Middleware to ensure initialization
-  app.use(async (req, res, next) => {
-    try {
-      if (!isInitialized) {
-        await performInit();
-      }
-      next();
-    } catch (err) {
-      console.error("Initialization middleware error:", err);
-      res.status(500).json({ ok: false, error: "Server initialization failed" });
+// Middleware to ensure initialization
+app.use(async (req, res, next) => {
+  try {
+    if (!isInitialized) {
+      await performInit();
     }
-  });
-
-  // Logging middleware
-  app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
+  } catch (err) {
+    console.error("Initialization middleware error:", err);
+    res.status(500).json({ ok: false, error: "Server initialization failed" });
+  }
+});
+
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    ok: true, 
+    status: "running", 
+    initialized: isInitialized,
+    usersCount: memoryUsers.length,
+    vercel: isVercel,
+    time: new Date().toISOString()
   });
+});
 
-  app.get("/api/health", (req, res) => {
-    res.json({ 
-      ok: true, 
-      status: "running", 
-      initialized: isInitialized,
-      usersCount: memoryUsers.length,
-      vercel: isVercel,
-      time: new Date().toISOString()
-    });
-  });
+// --- Auth & User Management ---
 
-  // --- Auth & User Management ---
-
-  app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
     try {
       let { email, password } = req.body;
       console.log(`Login attempt for: ${email}`);
@@ -727,37 +722,44 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    
-    // API 404 handler - must be before SPA fallback
-    app.all("/api/*", (req, res) => {
-      res.status(404).json({ ok: false, error: `API route ${req.url} not found` });
-    });
+// Vite middleware for development
+if (process.env.NODE_ENV !== "production") {
+  const { createServer: createViteServer } = await import("vite");
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: "spa",
+  });
+  app.use(vite.middlewares);
+} else {
+  const distPath = path.join(process.cwd(), "dist");
+  app.use(express.static(distPath));
+  
+  // API 404 handler - must be before SPA fallback
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ ok: false, error: `API route ${req.url} not found` });
+  });
 
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
+
+// Global error handler
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error("Global error:", err);
+  res.status(500).json({ ok: false, error: "Internal Server Error" });
+});
+
+async function startServer() {
+  await performInit();
+  const PORT = 3000;
+
+  // Only listen if not in Vercel environment (Vercel handles the server)
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
     });
   }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-
-  // Global error handler
-  app.use((err: any, req: any, res: any, next: any) => {
-    console.error("Global error:", err);
-    res.status(500).json({ ok: false, error: "Internal Server Error" });
-  });
 }
 
 startServer();
