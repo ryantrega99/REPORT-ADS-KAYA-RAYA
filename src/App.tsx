@@ -1138,7 +1138,10 @@ export default function App() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus user ini secara permanen?')) return;
+    // Optimistic update: remove from UI immediately
+    const previousUsers = [...users];
+    setUsers(prev => prev.filter(u => u.id !== userId));
+
     try {
       const res = await fetch('/api/users/delete', {
         method: 'POST',
@@ -1148,12 +1151,17 @@ export default function App() {
       const result = await res.json();
       if (result.ok) {
         addToast('User berhasil dihapus permanen', 'success');
+        // fetchUsers() is still good to ensure sync with server
         fetchUsers();
       } else {
+        // Rollback on error
+        setUsers(previousUsers);
         throw new Error(result.error || 'Gagal menghapus user');
       }
     } catch (error: any) {
       console.error("Error deleting user:", error);
+      // Rollback on error
+      setUsers(previousUsers);
       addToast('Gagal menghapus user: ' + error.message, 'warn');
     }
   };
@@ -2566,7 +2574,7 @@ Total Leads = ${fmtNum(uTotalLeads)}`;
                               <Settings size={14} />
                             </button>
                             <button 
-                              onClick={(e) => { e.stopPropagation(); if(confirm(`Hapus user ${u.name}?`)) handleDeleteUser(u.id); }}
+                              onClick={(e) => { e.stopPropagation(); if(window.confirm(`Hapus user ${u.name}?`)) handleDeleteUser(u.id); }}
                               className="w-8 h-8 rounded-xl flex items-center justify-center bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 transition-all"
                             >
                               <Trash2 size={14} />
