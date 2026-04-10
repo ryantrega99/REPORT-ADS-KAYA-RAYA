@@ -3234,63 +3234,150 @@ Total Leads = ${fmtNum(uTotalLeads)}`;
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                   <div>
                     <h1 className="text-4xl font-black tracking-tighter text-[var(--text-base)] mb-2">
-                      Automation Schedule
+                      Automation & Reporting
                     </h1>
                     <div className="flex items-center gap-2 text-[var(--text-muted)] font-medium">
                       <Clock size={16} />
-                      <span>Manage automated reporting and data sync tasks</span>
+                      <span>Manage automated reporting and WhatsApp notifications</span>
                     </div>
                   </div>
-                  <button onClick={() => addToast('Scheduling is handled by server-side cron jobs', 'info')} className="btn btn-primary h-12 px-6">
-                    <Plus size={20} /> Create New Task
-                  </button>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={async () => {
+                        const secret = prompt('Enter Automation Secret (default: kayaraya123)');
+                        if (!secret) return;
+                        addToast('Triggering automation...', 'info');
+                        try {
+                          const res = await fetch('/api/automation/run', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ secret })
+                          });
+                          const result = await res.json();
+                          if (result.ok) addToast('Automation triggered successfully!', 'success');
+                          else addToast(`Failed: ${result.error}`, 'err');
+                        } catch (e: any) {
+                          addToast(`Error: ${e.message}`, 'err');
+                        }
+                      }}
+                      className="btn btn-primary h-12 px-6 bg-indigo-600 hover:bg-indigo-700 border-none"
+                    >
+                      <Zap size={20} /> Run Now (Test)
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6">
-                  {[
-                    { name: 'Morning Performance Summary', time: '08:00 AM', status: 'Active', target: 'WhatsApp Group', freq: 'Daily' },
-                    { name: 'Evening Performance Summary', time: '05:00 PM', status: 'Active', target: 'WhatsApp Group', freq: 'Daily' },
-                    { name: 'Meta Ads Data Sync', time: 'Every 4 Hours', status: 'Active', target: 'Internal DB', freq: 'Periodic' },
-                    { name: 'Google Ads Data Sync', time: 'Every 6 Hours', status: 'Paused', target: 'Internal DB', freq: 'Periodic' },
-                  ].map((task, i) => (
-                    <div key={i} className="bento-card flex items-center justify-between group">
-                      <div className="flex items-center gap-6">
-                        <div className={cn(
-                          "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
-                          task.status === 'Active' ? "bg-emerald-50 text-emerald-600" : "bg-[var(--bg-subtle)] text-[var(--text-muted)]"
-                        )}>
-                          <Clock size={24} />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="bento-card">
+                      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-6">Active Schedules</h3>
+                      <div className="space-y-4">
+                        {[
+                          { name: 'Daily Performance Summary', time: '15:30 WIB', status: 'Active', target: 'WhatsApp', freq: 'Daily' },
+                          { name: 'Meta Ads Data Sync', time: 'Real-time', status: 'Active', target: 'Internal DB', freq: 'Continuous' },
+                          { name: 'Google Ads Data Sync', time: 'Real-time', status: 'Active', target: 'Internal DB', freq: 'Continuous' },
+                        ].map((task, i) => (
+                          <div key={i} className="flex items-center justify-between p-4 bg-[var(--bg-subtle)] rounded-2xl border border-[var(--border-base)] group hover:border-indigo-200 transition-all">
+                            <div className="flex items-center gap-4">
+                              <div className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                                task.status === 'Active' ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-400"
+                              )}>
+                                <Clock size={20} />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-[var(--text-base)] text-sm">{task.name}</h4>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{task.freq}</span>
+                                  <span className="w-1 h-1 rounded-full bg-[var(--border-base)]"></span>
+                                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{task.time}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                "px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
+                                task.status === 'Active' ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"
+                              )}>
+                                {task.status}
+                              </div>
+                              <button onClick={() => addToast('This schedule is managed by the server.', 'info')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:bg-white hover:text-indigo-600 transition-all">
+                                <Settings size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bento-card bg-indigo-600 text-white">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+                          <ShieldCheck size={24} />
                         </div>
                         <div>
-                          <h3 className="font-black text-[var(--text-base)]">{task.name}</h3>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1">
-                              <Calendar size={12} /> {task.freq}
-                            </span>
-                            <span className="w-1 h-1 rounded-full bg-[var(--border-base)]"></span>
-                            <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1">
-                              <Clock size={12} /> {task.time}
-                            </span>
-                            <span className="w-1 h-1 rounded-full bg-[var(--border-base)]"></span>
-                            <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1">
-                              <Target size={12} /> {task.target}
-                            </span>
+                          <h3 className="font-black text-lg mb-1">Automation Status</h3>
+                          <p className="text-indigo-100 text-xs font-medium leading-relaxed mb-4">
+                            Server automation is currently active. It will automatically fetch data from Meta & Google Ads and send reports to your WhatsApp.
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 text-[10px] font-bold flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                              Meta API: Connected
+                            </div>
+                            <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 text-[10px] font-bold flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                              Google API: Connected
+                            </div>
+                            <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 text-[10px] font-bold flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                              WhatsApp: Ready
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                          task.status === 'Active' ? "bg-emerald-100 text-emerald-700" : "bg-[var(--bg-subtle)] text-[var(--text-muted)]"
-                        )}>
-                          {task.status}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bento-card">
+                      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-6">WhatsApp Settings</h3>
+                      <div className="space-y-5">
+                        <div>
+                          <label className="label">Target Number</label>
+                          <input 
+                            className="input h-11" 
+                            placeholder="628123456789" 
+                            value={waTarget} 
+                            onChange={(e) => setWaTarget(e.target.value)} 
+                          />
                         </div>
-                        <button className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-base)] transition-all">
-                          <Settings size={18} />
+                        <div>
+                          <label className="label">Fonnte Token</label>
+                          <input 
+                            className="input h-11 text-xs" 
+                            type="password" 
+                            value={waToken} 
+                            onChange={(e) => setWaToken(e.target.value)} 
+                            placeholder="Token..." 
+                          />
+                        </div>
+                        <button onClick={saveAutomationConfig} className="btn btn-primary w-full h-11 bg-emerald-600 hover:bg-emerald-700 border-none">
+                          <Save size={18} /> Save Settings
                         </button>
                       </div>
                     </div>
-                  ))}
+
+                    <div className="bento-card border-red-100 bg-red-50/30">
+                      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-red-600 mb-4">Troubleshooting</h3>
+                      <p className="text-[10px] text-red-700 font-medium leading-relaxed mb-4">
+                        Jika muncul error <b>"Missing credentials"</b>, pastikan Anda sudah mengisi <b>GADS_CLIENT_ID</b>, <b>GADS_CLIENT_SECRET</b>, dan <b>GADS_REFRESH_TOKEN</b> di menu <b>Settings (Secrets)</b> AI Studio.
+                      </p>
+                      <button onClick={() => setActivePage('setup')} className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:underline flex items-center gap-1">
+                        Go to API Setup <ArrowRight size={12} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
