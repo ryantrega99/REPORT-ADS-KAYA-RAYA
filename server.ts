@@ -23,6 +23,7 @@ let db: any;
 let auth: any;
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
+let authError: string | null = null;
 
 const isVercel = process.env.VERCEL === '1';
 const DATA_DIR = isVercel ? path.join("/tmp", "data") : path.join(process.cwd(), "data");
@@ -49,8 +50,14 @@ async function initFirebase() {
     try {
       await signInWithEmailAndPassword(auth, adminEmail, adminPass);
       console.log("Server signed in to Firebase successfully.");
-    } catch (err) {
-      console.warn("Server failed to sign in to Firebase (this is expected if Email/Pass auth is not enabled):", err);
+      authError = null;
+    } catch (err: any) {
+      authError = err.message;
+      console.error("CRITICAL: Server failed to sign in to Firebase. Firestore operations will likely fail.", err);
+      console.error("Reason:", err.message);
+      if (err.code === 'auth/operation-not-allowed') {
+        console.error("ACTION REQUIRED: Enable Email/Password Authentication in the Firebase Console.");
+      }
     }
     return true;
   } catch (err) {
@@ -173,6 +180,7 @@ app.get("/api/health", (req, res) => {
     status: "running", 
     initialized: isInitialized,
     authenticated: !!auth?.currentUser,
+    authError: authError,
     userEmail: auth?.currentUser?.email,
     usersCount: memoryUsers.length,
     vercel: isVercel,
@@ -232,9 +240,9 @@ app.post("/api/auth/login", async (req, res) => {
       console.log(`Login failed for user: ${email}. User not found or password incorrect.`);
       res.status(401).json({ ok: false, error: "Email atau password salah" });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("Login error:", err);
-    res.status(500).json({ ok: false, error: "Server error" });
+    res.status(500).json({ ok: false, error: `Login server error: ${err.message || err}` });
   }
 });
 
@@ -264,23 +272,24 @@ app.post("/api/auth/register", async (req, res) => {
     
     const { pass, ...userWithoutPass } = newUser;
     res.json({ ok: true, user: userWithoutPass });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Register error:", err);
-    res.status(500).json({ ok: false, error: "Server error" });
+    res.status(500).json({ ok: false, error: `Register server error: ${err.message || err}` });
   }
 });
 
 app.get("/api/users", async (req, res) => {
   try {
+    await ensureAuth();
     const usersSnap = await getDocs(collection(db, 'users'));
     const users = usersSnap.docs.map(doc => {
       const { pass, ...u } = doc.data();
       return u;
     });
     res.json({ ok: true, users });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Get users error:", err);
-    res.status(500).json({ ok: false, error: "Server error" });
+    res.status(500).json({ ok: false, error: `Get users error: ${err.message || err}` });
   }
 });
 
@@ -356,9 +365,9 @@ app.post("/api/users/update", async (req, res) => {
     } else {
       res.status(404).json({ ok: false, error: "User not found" });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("Update user error:", err);
-    res.status(500).json({ ok: false, error: "Server error" });
+    res.status(500).json({ ok: false, error: `Update user error: ${err.message || err}` });
   }
 });
 
@@ -404,13 +413,15 @@ app.post("/api/users/delete", async (req, res) => {
   app.get("/api/data", async (req, res) => {
     try {
       res.json({ ok: true, data: memoryData });
-    } catch (err) {
-      res.status(500).json({ ok: false, error: "Server error" });
+    } catch (err: any) {
+      console.error("Get data error:", err);
+      res.status(500).json({ ok: false, error: `Get data error: ${err.message || err}` });
     }
   });
 
   app.post("/api/data", async (req, res) => {
     try {
+      await ensureAuth();
       const { userId, campaigns } = req.body;
       memoryData[userId] = { campaigns };
       
@@ -420,12 +431,15 @@ app.post("/api/users/delete", async (req, res) => {
         await setDoc(doc(db, 'campaigns', campaignId), { ...c, id: campaignId });
       }
 
-      try {
-        await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify(memoryData, null, 2));
-      } catch (e) {}
+      if (!isVercel) {
+        try {
+          await fs.writeFile(CAMPAIGNS_FILE, JSON.stringify(memoryData, null, 2));
+        } catch (e) {}
+      }
       res.json({ ok: true });
-    } catch (err) {
-      res.status(500).json({ ok: false, error: "Server error" });
+    } catch (err: any) {
+      console.error("Save data error:", err);
+      res.status(500).json({ ok: false, error: `Save data error: ${err.message || err}` });
     }
   });
 
