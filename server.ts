@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { firebaseConfig } from './src/firebase-config.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,14 +26,11 @@ let memoryData: any = {};
 
 async function initFirebase() {
   try {
-    const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-    const configContent = await fs.readFile(configPath, 'utf-8');
-    const firebaseConfig = JSON.parse(configContent);
     const firebaseApp = initializeApp(firebaseConfig);
     db = getFirestore(firebaseApp);
     auth = getAuth(firebaseApp);
 
-    console.log("Firebase initialized successfully.");
+    console.log("Firebase initialized successfully using bundled config.");
 
     // Sign in server to allow Firestore writes
     const adminEmail = "lkbimrbob@gmail.com";
@@ -157,6 +155,17 @@ async function startServer() {
   app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
+  });
+
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      ok: true, 
+      status: "running", 
+      initialized: isInitialized,
+      usersCount: memoryUsers.length,
+      vercel: isVercel,
+      time: new Date().toISOString()
+    });
   });
 
   // --- Auth & User Management ---

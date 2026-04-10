@@ -536,6 +536,18 @@ export default function App() {
     ['ads', 'ca'].forEach(p => addSyncLog(p, msg, type));
   };
 
+  useEffect(() => {
+    if (!currentUser) {
+      fetch('/api/health')
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) console.log('Server health check passed');
+          else console.warn('Server health check failed', data);
+        })
+        .catch(err => console.error('Server health check error', err));
+    }
+  }, [currentUser]);
+
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!loginEmail || !loginPass) {
@@ -550,16 +562,20 @@ export default function App() {
         body: JSON.stringify({ email: loginEmail, password: loginPass })
       });
       
-      const text = await res.text();
-      let result;
-      try {
-        result = JSON.parse(text);
-      } catch (e) {
-        console.error('Failed to parse JSON:', text);
-        addToast('Server error (Non-JSON). Silakan redeploy atau cek Vercel logs.', 'err');
+      if (!res.ok) {
+        const text = await res.text();
+        let errorMsg = `Login gagal (Status: ${res.status})`;
+        try {
+          const errJson = JSON.parse(text);
+          errorMsg = errJson.error || errorMsg;
+        } catch (e) {
+          errorMsg += `: ${text.substring(0, 50)}...`;
+        }
+        addToast(errorMsg, 'warn');
         return;
       }
 
+      const result = await res.json();
       if (result.ok) {
         setCurrentUser(result.user);
         localStorage.setItem('kayaraya_user', JSON.stringify(result.user));

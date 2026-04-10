@@ -1,0 +1,9 @@
+export const firebaseConfig = {
+  "apiKey": "AIzaSyARd4fFDkeErs-lT71HRlLCWkdvN3RkRQg",
+  "authDomain": "ads-mr-bob-report.firebaseapp.com",
+  "projectId": "ads-mr-bob-report",
+  "storageBucket": "ads-mr-bob-report.firebasestorage.app",
+  "messagingSenderId": "67027368740",
+  "appId": "1:67027368740:web:c695dc7bbf3ae1e8c0d1b1",
+  "measurementId": "G-70D51TPZ85"
+};
