@@ -2954,6 +2954,15 @@ ${reportSections}`;
 
                 {adsRawData.length > 0 ? (
                   <div className="space-y-4">
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-6 flex items-center gap-4 shadow-sm">
+                      <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-indigo-200">
+                        <AlertCircle size={20} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-0.5">Reminder</p>
+                        <h4 className="text-sm font-black text-indigo-900 tracking-tight">JANGAN LUPA EDIT JUMLAH LEADS KAWAN ✨</h4>
+                      </div>
+                    </div>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-sm font-black text-[var(--text-base)]">Fetch Results ({adsRawData.length})</h3>
                       <button onClick={importAdsToApp} className="btn btn-primary py-2 px-5 text-xs">
