@@ -115,7 +115,6 @@ const SyncPanel = ({
   googleUser,
   sheetId, 
   sheetTab, 
-  autoSync, 
   appendMode, 
   syncLogs, 
   isSyncing, 
@@ -127,7 +126,6 @@ const SyncPanel = ({
   onConnect, 
   onSync, 
   onTabChange, 
-  onAutoSyncChange, 
   onAppendModeChange,
   columns,
   exportCols,
@@ -138,7 +136,6 @@ const SyncPanel = ({
   googleUser: any,
   sheetId: string, 
   sheetTab: string, 
-  autoSync: boolean, 
   appendMode: boolean, 
   syncLogs: { msg: string, type: 'ok' | 'err' | 'info' | 'warn', ts: string }[], 
   isSyncing: boolean, 
@@ -150,7 +147,6 @@ const SyncPanel = ({
   onConnect: (url: string) => void, 
   onSync: () => void, 
   onTabChange: (val: string) => void, 
-  onAutoSyncChange: (val: boolean) => void, 
   onAppendModeChange: (val: boolean) => void,
   columns: string[],
   exportCols: string[],
@@ -274,25 +270,6 @@ const SyncPanel = ({
                   <div>
                     <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-3">Pengaturan Sync</label>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between p-3 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-base)]">
-                        <div>
-                          <p className="text-xs font-bold text-[var(--text-base)]">Auto sync setelah fetch</p>
-                          <p className="text-[10px] text-[var(--text-muted)] font-medium">Otomatis kirim data setelah Fetch</p>
-                        </div>
-                        <button 
-                          onClick={() => onAutoSyncChange(!autoSync)}
-                          className={cn(
-                            "w-10 h-5 rounded-full relative transition-colors",
-                            autoSync ? "bg-indigo-600" : "bg-[var(--border-base)]"
-                          )}
-                        >
-                          <div className={cn(
-                            "absolute top-1 w-3 h-3 bg-[var(--bg-surface)] rounded-full transition-all",
-                            autoSync ? "right-1" : "left-1"
-                          )}></div>
-                        </button>
-                      </div>
-
                       <div className="flex items-center justify-between p-3 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-base)]">
                         <div>
                           <p className="text-xs font-bold text-[var(--text-base)]">Mode append</p>
@@ -424,7 +401,6 @@ export default function App() {
   const [lastSync, setLastSync] = useState<Record<string, string>>({ ads: '', ca: '' });
   const [collapsedSync, setCollapsedSync] = useState<Record<string, boolean>>({ ads: false, ca: false });
   const [isSyncPanelOpen, setIsSyncPanelOpen] = useState<Record<string, boolean>>({ ads: true, ca: true });
-  const [autoSync, setAutoSync] = useState<Record<string, boolean>>({ ads: true, ca: true });
   const [appendMode, setAppendMode] = useState<Record<string, boolean>>({ ads: true, ca: true });
   const [exportCols, setExportCols] = useState<Record<string, string[]>>({
     ads: ['Tanggal Fetch', 'User', 'Date', 'Platform', 'Product', 'Spend', 'Impressions', 'Clicks', 'Leads', 'CPR'],
@@ -1025,9 +1001,8 @@ export default function App() {
 
         await (window as any).gapi.client.sheets.spreadsheets.values.append({
           spreadsheetId: sheetIds[p],
-          range: `'${tabName}'!A2`,
+          range: `'${tabName}'!A1`,
           valueInputOption,
-          insertDataOption: 'INSERT_ROWS',
           resource: { values: values.slice(1) }
         });
       } else {
@@ -1054,8 +1029,12 @@ export default function App() {
         return;
       }
       const msg = err.result?.error?.message || 'Gagal melakukan sync.';
-      addSyncLog(p, msg, 'err');
-      addToast(msg, 'warn');
+      let finalMsg = msg;
+      if (msg.toLowerCase().includes('protected cell')) {
+        finalMsg = '⚠️ Gagal: Sel atau Sheet di Google Sheets diproteksi. Silakan buka Google Sheets Anda, lalu hapus "Protected Sheets & Ranges" agar aplikasi bisa menulis data.';
+      }
+      addSyncLog(p, finalMsg, 'err');
+      addToast(finalMsg, 'warn');
     } finally {
       setIsSyncing(prev => ({ ...prev, [p]: false }));
     }
@@ -1643,10 +1622,6 @@ export default function App() {
       
       // Auto import to WA menu
       await importAdsToApp(allProcessed);
-      
-      if (autoSync.ads && googleAccessToken && sheetIds.ads) {
-        doSync('ads', allProcessed);
-      }
     } catch (err: any) {
       addToast('Gagal: ' + err.message, 'warn');
     } finally {
@@ -1859,10 +1834,6 @@ export default function App() {
 
       setFbCreatives(allCreatives);
       addToast(`Berhasil mengambil total ${allCreatives.length} Creative ID`);
-
-      if (autoSync.ca && googleAccessToken && sheetIds.ca) {
-        doSync('ca', allCreatives);
-      }
     } catch (err: any) {
       addToast('Gagal: ' + err.message, 'warn');
     } finally {
@@ -2962,7 +2933,6 @@ ${reportSections}`;
                       googleUser={googleUser}
                       sheetId={sheetIds.ads}
                       sheetTab={sheetTabs.ads}
-                      autoSync={autoSync.ads}
                       appendMode={appendMode.ads}
                       syncLogs={syncLogs.ads}
                       isSyncing={isSyncing.ads}
@@ -2974,7 +2944,6 @@ ${reportSections}`;
                       onConnect={(url) => connectSheet('ads', url)}
                       onSync={() => doSync('ads', adsRawData)}
                       onTabChange={(val) => setSheetTabs(prev => ({ ...prev, ads: val }))}
-                      onAutoSyncChange={(val) => setAutoSync(prev => ({ ...prev, ads: val }))}
                       onAppendModeChange={(val) => setAppendMode(prev => ({ ...prev, ads: val }))}
                       columns={['Tanggal Fetch', 'User', 'Date', 'Platform', 'Product', 'Spend', 'Impressions', 'Clicks', 'Leads']}
                       exportCols={exportCols.ads}
@@ -3143,7 +3112,6 @@ ${reportSections}`;
                   googleUser={googleUser}
                   sheetId={sheetIds.ca}
                   sheetTab={sheetTabs.ca}
-                  autoSync={autoSync.ca}
                   appendMode={appendMode.ca}
                   syncLogs={syncLogs.ca}
                   isSyncing={isSyncing.ca}
@@ -3155,7 +3123,6 @@ ${reportSections}`;
                   onConnect={(url) => connectSheet('ca', url)}
                   onSync={() => doSync('ca', fbCreatives)}
                   onTabChange={(val) => setSheetTabs(prev => ({ ...prev, ca: val }))}
-                  onAutoSyncChange={(val) => setAutoSync(prev => ({ ...prev, ca: val }))}
                   onAppendModeChange={(val) => setAppendMode(prev => ({ ...prev, ca: val }))}
                   columns={['Tanggal Fetch', 'Product', 'Performance', 'Leads', 'Creative ID', 'Status', 'Impressions', 'Thruplays']}
                   exportCols={exportCols.ca}
