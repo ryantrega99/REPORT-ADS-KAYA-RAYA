@@ -73,7 +73,7 @@ const GOOGLE_CONFIG = {
 // --- Components ---
 
 const Logo = ({ className = "w-8 h-8" }: { className?: string }) => (
-  <div className={cn("bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xs", className)}>
+  <div className={cn("bg-gradient-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-lg", className)}>
     ADS
   </div>
 );
@@ -296,7 +296,7 @@ const SyncPanel = ({
                       <button 
                         onClick={onSync}
                         disabled={!sheetId || isSyncing}
-                        className="btn btn-primary h-10 px-6 text-xs bg-emerald-600 hover:bg-emerald-700 border-none shadow-emerald-500/20"
+                        className="h-10 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:scale-100"
                       >
                         {isSyncing ? <RefreshCw size={14} className="animate-spin" /> : <Database size={14} />}
                         {isSyncing ? 'Syncing...' : 'Sync ke Sheets'}
@@ -2002,7 +2002,7 @@ ${reportSections}`;
                   setIsAuthReady(true);
                   setIsProfileLoading(false);
                 }}
-                className="text-[10px] font-bold text-indigo-600 hover:underline mt-4 opacity-50 hover:opacity-100 transition-opacity"
+                className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 hover:underline mt-4 opacity-50 hover:opacity-100 transition-all"
               >
                 Masuk Paksa (Jika loading terlalu lama)
               </button>
@@ -2017,26 +2017,28 @@ ${reportSections}`;
     return (
       <div className="min-h-screen flex bg-[var(--bg-base)] font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
         {/* Left Side - Branding & Info */}
-        <div className="hidden lg:flex lg:w-1/2 bg-[#020617] relative overflow-hidden flex-col justify-between p-20">
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-violet-600 to-blue-600 relative overflow-hidden flex-col justify-between p-20">
           {/* Abstract Background Elements */}
-          <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full bg-gradient-to-br from-indigo-500/20 to-transparent blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] rounded-full bg-gradient-to-tl from-blue-500/10 to-transparent blur-[120px]"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full bg-white/10 blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] rounded-full bg-cyan-400/20 blur-[120px]"></div>
           
           <div className="relative z-10">
               <div className="flex items-center gap-4 mb-16">
-                <Logo className="w-14 h-14 shadow-2xl shadow-indigo-500/30" />
-                <div className="text-4xl font-black tracking-tighter text-white">
-                  REPORT ADS<span className="text-indigo-400"> KAYA RAYA</span>
+                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-indigo-600 font-black text-xl shadow-2xl">
+                  ADS
+                </div>
+                <div className="text-4xl font-black tracking-tighter text-white drop-shadow-md">
+                  REPORT ADS<span className="text-cyan-300"> KAYA RAYA</span>
                 </div>
               </div>
             
-            <h1 className="text-7xl font-black text-white leading-[0.95] mb-8 tracking-tighter">
+            <h1 className="text-7xl font-black text-white leading-[0.95] mb-8 tracking-tighter drop-shadow-xl">
               Professional <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-indigo-200 to-blue-200">Ads Analytics</span> <br />
+              <span className="text-cyan-200">Ads Analytics</span> <br />
               & Sync.
             </h1>
             
-            <p className="text-xl text-slate-400 max-w-md leading-relaxed font-medium">
+            <p className="text-xl text-indigo-50 max-w-md leading-relaxed font-medium drop-shadow-sm">
               Solusi enterprise untuk otomatisasi pelaporan Facebook & Google Ads. Sinkronisasi data real-time ke WhatsApp dan Google Sheets dalam satu klik.
             </p>
           </div>
@@ -2045,22 +2047,22 @@ ${reportSections}`;
             <div className="grid grid-cols-2 gap-8 max-w-lg">
               <div className="flex flex-col gap-1">
                 <span className="text-4xl font-black text-white tracking-tighter">Real-time</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold">WhatsApp Reporting</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-indigo-200 font-bold">WhatsApp Reporting</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-4xl font-black text-white tracking-tighter">Auto</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold">Google Sheets Sync</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-indigo-200 font-bold">Google Sheets Sync</span>
               </div>
             </div>
             
-            <div className="mt-16 text-slate-500 text-xs font-bold tracking-widest uppercase">
+            <div className="mt-16 text-indigo-200/80 text-xs font-bold tracking-widest uppercase">
               &copy; 2026 KAYA RAYA FOUNDATION &bull; PREMIUM ADS AUTOMATION
             </div>
           </div>
         </div>
 
         {/* Right Side - Login/Register Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[var(--bg-base)] relative">
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[#f0f4ff] relative">
           <div className="absolute top-8 right-8">
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
@@ -2093,15 +2095,15 @@ ${reportSections}`;
                 <button 
                   onClick={handleFirebaseLogin}
                   disabled={isLoggingIn}
-                  className="btn btn-primary w-full h-13 text-base font-bold mt-4 flex items-center justify-center gap-3"
+                  className="w-full h-14 rounded-2xl bg-white border-2 border-indigo-100 text-indigo-900 font-black text-base shadow-xl shadow-indigo-500/5 hover:shadow-indigo-500/10 hover:border-indigo-200 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4"
                 >
                   {isLoggingIn ? <RefreshCw size={20} className="animate-spin" /> : (
                     <>
                       <svg width="20" height="20" viewBox="0 0 24 24">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#ffffff"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#ffffff" opacity="0.8"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#ffffff" opacity="0.6"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#ffffff" opacity="0.9"/>
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                       </svg>
                       Masuk dengan Google
                     </>
@@ -2113,7 +2115,7 @@ ${reportSections}`;
                     <div className="w-full border-t border-[var(--border-base)]"></div>
                   </div>
                   <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
-                    <span className="bg-[var(--bg-surface)] px-4 text-[var(--text-muted)]">Atau Gunakan Email</span>
+                    <span className="bg-[#f0f4ff] px-4 text-indigo-500">Atau Gunakan Email</span>
                   </div>
                 </div>
 
@@ -2152,7 +2154,7 @@ ${reportSections}`;
                 <button 
                   onClick={() => isRegistering ? handleRegister() : handleLogin()}
                   disabled={isLoggingIn || isRegistering}
-                  className="btn btn-primary w-full h-13 text-base font-bold mt-4"
+                  className="w-full h-14 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 text-white font-black text-lg shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
                 >
                   {isLoggingIn || isRegistering ? <RefreshCw size={20} className="animate-spin" /> : (isRegistering ? 'Daftar Sekarang' : 'Masuk ke Dashboard')}
                 </button>
@@ -2162,7 +2164,7 @@ ${reportSections}`;
                     {isRegistering ? 'Sudah punya akun?' : 'Belum punya akun?'}
                     <button 
                       onClick={() => setIsRegistering(!isRegistering)}
-                      className="ml-1.5 font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+                      className="ml-1.5 font-black text-indigo-600 hover:text-indigo-800 transition-colors"
                     >
                       {isRegistering ? 'Masuk Sekarang' : 'Daftar Gratis'}
                     </button>
@@ -2171,10 +2173,10 @@ ${reportSections}`;
               </div>
             </div>
 
-            <div className="mt-16 pt-8 border-t border-[var(--border-base)] flex flex-col items-center gap-3">
-              <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.3em]">Powered By</div>
-              <div className="text-lg font-black text-[var(--text-base)] tracking-tighter">
-                REPORT ADS<span className="text-blue-600"> KAYA RAYA</span>
+            <div className="mt-16 pt-8 border-t border-indigo-100 flex flex-col items-center gap-3">
+              <div className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Powered By</div>
+              <div className="text-lg font-black text-indigo-900 tracking-tighter">
+                REPORT ADS<span className="text-indigo-600"> KAYA RAYA</span>
               </div>
             </div>
           </div>
@@ -2258,7 +2260,7 @@ ${reportSections}`;
 
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside className="w-[260px] bg-[var(--bg-surface)] border-r border-[var(--border-base)] p-6 flex flex-col gap-1 shrink-0 hidden md:flex justify-between">
+        <aside className="w-[260px] bg-indigo-50/30 dark:bg-[var(--bg-surface)] border-r border-[var(--border-base)] p-6 flex flex-col gap-1 shrink-0 hidden md:flex justify-between">
           <div className="space-y-8">
             <div>
               <div className="text-[10px] font-black tracking-[0.2em] uppercase text-[var(--text-muted)] px-4 mb-4">Main Menu</div>
@@ -2909,12 +2911,12 @@ ${reportSections}`;
                           <button 
                             onClick={fetchAdsData}
                             disabled={isAdsLoading}
-                            className="btn btn-primary w-full h-11 text-sm mt-4"
+                            className="w-full h-12 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 text-white font-black text-sm shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
                           >
                             {isAdsLoading ? (
-                              <><RefreshCw size={18} className="animate-spin mr-2" /> Fetching...</>
+                              <><RefreshCw size={18} className="animate-spin" /> Fetching...</>
                             ) : (
-                              <><RefreshCw size={18} className="mr-2" /> Fetch Data</>
+                              <><RefreshCw size={18} /> Fetch Data</>
                             )}
                           </button>
                         </div>
@@ -2950,18 +2952,18 @@ ${reportSections}`;
 
                 {adsRawData.length > 0 ? (
                   <div className="space-y-4">
-                    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-6 flex items-center gap-4 shadow-sm">
-                      <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-indigo-200">
+                    <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-4 mb-6 flex items-center gap-4 shadow-xl shadow-indigo-500/20">
+                      <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg">
                         <AlertCircle size={20} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-0.5">Reminder</p>
-                        <h4 className="text-sm font-black text-indigo-900 tracking-tight">JANGAN LUPA EDIT JUMLAH LEADS KAWAN ✨</h4>
+                        <p className="text-[10px] font-black text-indigo-100 uppercase tracking-[0.2em] mb-0.5">Reminder</p>
+                        <h4 className="text-sm font-black text-white tracking-tight">JANGAN LUPA EDIT JUMLAH LEADS KAWAN ✨</h4>
                       </div>
                     </div>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-sm font-black text-[var(--text-base)]">Fetch Results ({adsRawData.length})</h3>
-                      <button onClick={importAdsToApp} className="btn btn-primary py-2 px-5 text-xs">
+                      <button onClick={importAdsToApp} className="h-10 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
                         <Download size={14} /> Import to Dashboard
                       </button>
                     </div>
@@ -2990,11 +2992,11 @@ ${reportSections}`;
                           </div>
                           
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-[var(--bg-subtle)] rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Spend</p>
-                              <p className="font-mono font-bold text-[var(--text-base)] text-sm">Rp {fmtNum(c.spend)}</p>
+                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Spend</p>
+                              <p className="font-mono font-bold text-indigo-700 text-sm">Rp {fmtNum(c.spend)}</p>
                             </div>
-                            <div className="bg-blue-50 rounded-xl p-3">
+                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
                               <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Leads</p>
                               <input 
                                 type="number" 
@@ -3003,17 +3005,17 @@ ${reportSections}`;
                                 onChange={(e) => handleEditLeads(i, e.target.value)}
                               />
                             </div>
-                            <div className="bg-emerald-50 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">CPR</p>
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">CPR</p>
                               <p className="font-mono font-black text-emerald-600 text-sm">Rp {fmtNum(Math.round(c.cpr || 0))}</p>
                             </div>
-                            <div className="bg-[var(--bg-subtle)] rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Impressions</p>
-                              <p className="font-mono font-bold text-[var(--text-base)] text-sm">{fmtNum(parseInt(c.impressions))}</p>
+                            <div className="bg-violet-50 border border-violet-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-1">Impressions</p>
+                              <p className="font-mono font-bold text-violet-700 text-sm">{fmtNum(parseInt(c.impressions))}</p>
                             </div>
-                            <div className="bg-[var(--bg-subtle)] rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Clicks</p>
-                              <p className="font-mono font-bold text-[var(--text-base)] text-sm">{fmtNum(parseInt(c.clicks))}</p>
+                            <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest mb-1">Clicks</p>
+                              <p className="font-mono font-bold text-cyan-700 text-sm">{fmtNum(parseInt(c.clicks))}</p>
                             </div>
                           </div>
                           
@@ -3888,7 +3890,7 @@ function SidebarItem({ icon, label, active, onClick }: { icon: React.ReactNode, 
         "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all w-full text-left group",
         active 
           ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 dark:bg-indigo-500 dark:shadow-indigo-900/30" 
-          : "text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-base)]"
+          : "text-[var(--text-muted)] hover:bg-indigo-100/50 dark:hover:bg-[var(--bg-subtle)] hover:text-indigo-600 dark:hover:text-[var(--text-base)]"
       )}
     >
       <span className={cn("transition-colors", active ? "text-white" : "text-[var(--text-muted)] group-hover:text-[var(--text-base)]")}>{icon}</span>
