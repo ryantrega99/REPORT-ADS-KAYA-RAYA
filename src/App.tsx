@@ -2017,26 +2017,26 @@ ${reportSections}`;
     return (
       <div className="min-h-screen flex bg-[var(--bg-base)] font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
         {/* Left Side - Branding & Info */}
-        <div className="hidden lg:flex lg:w-1/2 bg-black relative overflow-hidden flex-col justify-between p-20">
+        <div className="hidden lg:flex lg:w-1/2 bg-[#020617] relative overflow-hidden flex-col justify-between p-20">
           {/* Abstract Background Elements */}
-          <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full bg-gradient-to-br from-indigo-600/30 to-transparent blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] rounded-full bg-gradient-to-tl from-violet-600/20 to-transparent blur-[120px]"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full bg-gradient-to-br from-indigo-500/20 to-transparent blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] rounded-full bg-gradient-to-tl from-blue-500/10 to-transparent blur-[120px]"></div>
           
           <div className="relative z-10">
               <div className="flex items-center gap-4 mb-16">
-                <Logo className="w-14 h-14 shadow-2xl shadow-indigo-500/20" />
+                <Logo className="w-14 h-14 shadow-2xl shadow-indigo-500/30" />
                 <div className="text-4xl font-black tracking-tighter text-white">
-                  REPORT ADS<span className="text-indigo-500"> KAYA RAYA</span>
+                  REPORT ADS<span className="text-indigo-400"> KAYA RAYA</span>
                 </div>
               </div>
             
             <h1 className="text-7xl font-black text-white leading-[0.95] mb-8 tracking-tighter">
               Professional <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Ads Analytics</span> <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-indigo-200 to-blue-200">Ads Analytics</span> <br />
               & Sync.
             </h1>
             
-            <p className="text-xl text-[var(--text-muted)] max-w-md leading-relaxed font-medium">
+            <p className="text-xl text-slate-400 max-w-md leading-relaxed font-medium">
               Solusi enterprise untuk otomatisasi pelaporan Facebook & Google Ads. Sinkronisasi data real-time ke WhatsApp dan Google Sheets dalam satu klik.
             </p>
           </div>
@@ -2053,7 +2053,7 @@ ${reportSections}`;
               </div>
             </div>
             
-            <div className="mt-16 text-[var(--text-muted)] text-xs font-bold tracking-widest uppercase">
+            <div className="mt-16 text-slate-500 text-xs font-bold tracking-widest uppercase">
               &copy; 2026 KAYA RAYA FOUNDATION &bull; PREMIUM ADS AUTOMATION
             </div>
           </div>
