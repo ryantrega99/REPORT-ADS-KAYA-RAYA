@@ -427,8 +427,8 @@ export default function App() {
   const [autoSync, setAutoSync] = useState<Record<string, boolean>>({ ads: true, ca: true });
   const [appendMode, setAppendMode] = useState<Record<string, boolean>>({ ads: true, ca: true });
   const [exportCols, setExportCols] = useState<Record<string, string[]>>({
-    ads: ['Tanggal Fetch', 'User', 'Date', 'Platform', 'Product', 'Spend', 'Impressions', 'Clicks', 'Leads'],
-    ca: ['Tanggal Fetch', 'Product', 'Performance', 'Leads', 'Creative ID', 'Status', 'Impressions', 'Thruplays'],
+    ads: ['Tanggal Fetch', 'User', 'Date', 'Platform', 'Product', 'Spend', 'Impressions', 'Clicks', 'Leads', 'CPR'],
+    ca: ['Tanggal Fetch', 'Product', 'Performance', 'Leads', 'Spend', 'CPR', 'Creative ID', 'Status', 'Impressions', 'Thruplays'],
   });
 
   const pendingActionRef = useRef<(() => void) | null>(null);
@@ -981,12 +981,15 @@ export default function App() {
         'Impressions': r => parseInt(r.impressions) || 0, 
         'Clicks': r => parseInt(r.clicks) || 0,
         'Leads': r => r.leads || 0, 
+        'CPR': r => 'Rp ' + Math.round(r.cpr || 0).toLocaleString('id-ID'),
       },
       ca: {
         'Tanggal Fetch': () => now(), 
         'Product': r => r.product || r.produk || '–',
         'Performance': r => r.performance_label || r.performance_status || '–', 
         'Leads': r => r.leads || 0,
+        'Spend': r => 'Rp ' + (r.spend || 0).toLocaleString('id-ID'),
+        'CPR': r => 'Rp ' + Math.round(r.cpr || 0).toLocaleString('id-ID'),
         'Creative ID': r => r.creative_id || r.id || '–', 
         'Status': r => r.status || 'UNKNOWN',
         'Impressions': r => r.impressions || 0, 
@@ -1551,6 +1554,7 @@ export default function App() {
             spend: fbTotalSpend,
             leads: fbTotalLeads,
             ctr: fbTotalImpressions > 0 ? ((fbTotalClicks / fbTotalImpressions) * 100).toFixed(2) + '%' : '0.00%',
+            cpr: fbTotalLeads > 0 ? fbTotalSpend / fbTotalLeads : 0,
             timestamp: now,
             date_range: dateRangeStr,
             user_name: fetchUser || currentUser?.name || 'Unknown',
@@ -1639,6 +1643,7 @@ export default function App() {
             spend: gaTotalSpend,
             leads: gaTotalLeads,
             ctr: gaTotalImpressions > 0 ? ((gaTotalClicks / gaTotalImpressions) * 100).toFixed(2) + '%' : '0.00%',
+            cpr: gaTotalLeads > 0 ? gaTotalSpend / gaTotalLeads : 0,
             timestamp: now,
             date_range: dateRangeStr,
             user_name: fetchUser || currentUser?.name || 'Unknown',
@@ -1845,11 +1850,12 @@ export default function App() {
             format_konten: isVideo ? 'Video' : 'Image',
             impressions: parseInt(insight.impressions || '0'),
             leads: leads,
+            spend: parseFloat(insight.spend || '0'),
+            cpr: leads > 0 ? parseFloat(insight.spend || '0') / leads : 0,
             performance_status: leads >= 10 ? 'Winning' : leads > 2 ? 'Good' : 'Worst',
             thruplays: thruplays,
-            _spend: parseFloat(insight.spend || '0')
           };
-        }).filter((c: any) => (c.status === 'ACTIVE' || c.status === 'PAUSED') && c._spend > 0);
+        }).filter((c: any) => (c.status === 'ACTIVE' || c.status === 'PAUSED') && (c.spend || 0) > 0);
 
         allCreatives = [...allCreatives, ...creatives];
       }
@@ -1937,8 +1943,13 @@ export default function App() {
 
     const campaignsList = Object.entries(groupedStats)
       .filter(([_, stats]) => stats.spend > 0 || stats.impressions > 0)
-      .map(([key, stats]) => `=> ${key}\n   Spent: Rp ${fmtNum(Math.round(stats.spend))}\n   Impressions: ${fmtNum(Math.round(stats.impressions))}\n   Clicks: ${fmtNum(Math.round(stats.clicks))}\n   Leads: ${fmtNum(Math.round(stats.leads))}`)
+      .map(([key, stats]) => {
+        const cpr = stats.leads > 0 ? stats.spend / stats.leads : 0;
+        return `=> ${key}\n   Spent: Rp ${fmtNum(Math.round(stats.spend))}\n   Impressions: ${fmtNum(Math.round(stats.impressions))}\n   Clicks: ${fmtNum(Math.round(stats.clicks))}\n   Leads: ${fmtNum(Math.round(stats.leads))}\n   CPR: Rp ${fmtNum(Math.round(cpr))}`;
+      })
       .join('\n\n');
+
+    const uTotalCPR = uTotalLeads > 0 ? uTotalSpend / uTotalLeads : 0;
 
     const msg = `Laporan Iklan ${dateStr}
 User: ${user.name}
@@ -1949,7 +1960,8 @@ ${campaignsList}
 Total Spent = Rp ${fmtNum(uTotalSpend)}
 Total Impressions = ${fmtNum(uTotalImpressions)}
 Total Clicks = ${fmtNum(uTotalClicks)}
-Total Leads = ${fmtNum(uTotalLeads)}`;
+Total Leads = ${fmtNum(uTotalLeads)}
+Total CPR = Rp ${fmtNum(Math.round(uTotalCPR))}`;
 
     setWaMessage(msg);
   };
@@ -3021,6 +3033,10 @@ Total Leads = ${fmtNum(uTotalLeads)}`;
                             <div className="bg-blue-50 rounded-xl p-3">
                               <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Leads</p>
                               <p className="font-mono font-black text-blue-600 text-sm">{c.leads}</p>
+                            </div>
+                            <div className="bg-emerald-50 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">CPR</p>
+                              <p className="font-mono font-black text-emerald-600 text-sm">Rp {fmtNum(Math.round(c.cpr || 0))}</p>
                             </div>
                             <div className="bg-[var(--bg-subtle)] rounded-xl p-3">
                               <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Impressions</p>

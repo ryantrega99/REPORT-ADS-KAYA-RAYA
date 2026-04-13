@@ -873,7 +873,7 @@ async function runAutomationForUser(user: any) {
         if (!accountId.trim()) continue;
         if (!accountId.startsWith('act_')) accountId = 'act_' + accountId;
         try {
-          const url = `https://graph.facebook.com/v21.0/${accountId}/insights?level=campaign&fields=campaign_name,spend&access_token=${user.fbToken}&time_range={"since":"${yesterdayStr}","until":"${todayStr}"}&time_increment=1&limit=500`;
+          const url = `https://graph.facebook.com/v21.0/${accountId}/insights?level=campaign&fields=campaign_name,spend,actions&access_token=${user.fbToken}&time_range={"since":"${yesterdayStr}","until":"${todayStr}"}&time_increment=1&limit=500`;
           const res = await fetch(url);
           const result = await res.json();
           
@@ -882,9 +882,14 @@ async function runAutomationForUser(user: any) {
               const spend = parseFloat(c.spend || '0');
               if (spend <= 0) return;
 
+              const actions = c.actions || [];
+              const leadAct = actions.find((a: any) => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
+              const leads = leadAct ? parseInt(leadAct.value) : 0;
+
               const item = {
                 name: `Facebook ${c.campaign_name}`,
-                spend: spend
+                spend: spend,
+                leads: leads
               };
               
               if (c.date_start === yesterdayStr) {
@@ -926,7 +931,7 @@ async function runAutomationForUser(user: any) {
               });
 
               const query = `
-                SELECT segments.date, campaign.name, metrics.cost_micros
+                SELECT segments.date, campaign.name, metrics.cost_micros, metrics.conversions
                 FROM campaign 
                 WHERE segments.date BETWEEN '${yesterdayStr}' AND '${todayStr}'
               `;
@@ -935,9 +940,12 @@ async function runAutomationForUser(user: any) {
                 const spend = (row.metrics.cost_micros || 0) / 1000000;
                 if (spend <= 0) return;
 
+                const leads = Math.round(row.metrics.conversions || 0);
+
                 const item = {
                   name: `Google ${row.campaign.name}`,
-                  spend: spend
+                  spend: spend,
+                  leads: leads
                 };
                 
                 if (row.segments.date === yesterdayStr) {
@@ -961,8 +969,15 @@ async function runAutomationForUser(user: any) {
     // 3. Generate Message
     const fmt = (n: number) => Math.round(n).toLocaleString('id-ID');
     
-    const yesterdayList = yesterdayCampaigns.map(c => `=> ${c.name} = Rp ${fmt(c.spend)}`).join('\n');
-    const todayList = todayCampaigns.map(c => `=> ${c.name} = Rp ${fmt(c.spend)}`).join('\n');
+    const formatList = (camps: any[]) => {
+      return camps.map(c => {
+        const cpr = c.leads > 0 ? c.spend / c.leads : 0;
+        return `=> ${c.name} = Rp ${fmt(c.spend)} (${c.leads} Leads, CPR: Rp ${fmt(cpr)})`;
+      }).join('\n');
+    };
+
+    const yesterdayList = formatList(yesterdayCampaigns);
+    const todayList = formatList(todayCampaigns);
 
     const msg = `Advertiser Mr.BOB: Advertiser ${user.name}
 Spent Iklan ${yesterdayStr}

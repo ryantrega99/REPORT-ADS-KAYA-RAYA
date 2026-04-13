@@ -15,6 +15,8 @@ export interface Creative {
   editor?: string;
   impressions?: number;
   leads?: number;
+  spend?: number;
+  cpr?: number;
   performance_status?: 'Winning' | 'Good' | 'Worst';
   avg_play_time?: number;
   thruplays?: number;
@@ -46,6 +48,7 @@ export interface Campaign {
   spend: number;
   leads: number;
   ctr: string;
+  cpr?: number;
   tanggal: string;
   date_range?: string;
   fb_campaign_id?: string;
