@@ -73,8 +73,10 @@ const GOOGLE_CONFIG = {
 // --- Components ---
 
 const Logo = ({ className = "w-8 h-8" }: { className?: string }) => (
-  <div className={cn("bg-gradient-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-lg", className)}>
-    ADS
+  <div className={cn("bg-white rounded-lg flex items-center justify-center font-bold text-xs shadow-md border border-slate-100", className)}>
+    <span className="text-[#4285F4]">A</span>
+    <span className="text-[#EA4335]">D</span>
+    <span className="text-[#FBBC05]">S</span>
   </div>
 );
 
@@ -296,10 +298,10 @@ const SyncPanel = ({
                       <button 
                         onClick={onSync}
                         disabled={!sheetId || isSyncing}
-                        className="h-10 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:scale-100"
+                        className="h-10 px-6 rounded-xl bg-[#34A853] text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-green-500/20 hover:bg-[#2d9147] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:scale-100"
                       >
                         {isSyncing ? <RefreshCw size={14} className="animate-spin" /> : <Database size={14} />}
-                        {isSyncing ? 'Syncing...' : 'Sync ke Sheets'}
+                        {isSyncing ? 'Sync ke Sheets' : 'Sync ke Sheets'}
                       </button>
                       <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                         {lastSync ? `Terakhir: ${lastSync}` : 'Belum pernah sync'}
@@ -2017,28 +2019,26 @@ ${reportSections}`;
     return (
       <div className="min-h-screen flex bg-[var(--bg-base)] font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
         {/* Left Side - Branding & Info */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-violet-600 to-blue-600 relative overflow-hidden flex-col justify-between p-20">
+        <div className="hidden lg:flex lg:w-1/2 bg-[#f8f9fa] relative overflow-hidden flex-col justify-between p-20 border-r border-slate-200">
           {/* Abstract Background Elements */}
-          <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full bg-white/10 blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] rounded-full bg-cyan-400/20 blur-[120px]"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full bg-blue-500/5 blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] rounded-full bg-green-500/5 blur-[120px]"></div>
           
           <div className="relative z-10">
               <div className="flex items-center gap-4 mb-16">
-                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-indigo-600 font-black text-xl shadow-2xl">
-                  ADS
-                </div>
-                <div className="text-4xl font-black tracking-tighter text-white drop-shadow-md">
-                  REPORT ADS<span className="text-cyan-300"> KAYA RAYA</span>
+                <Logo className="w-14 h-14 shadow-xl" />
+                <div className="text-4xl font-black tracking-tighter text-slate-900">
+                  <span className="text-[#4285F4]">REPORT</span> <span className="text-[#EA4335]">ADS</span>
                 </div>
               </div>
             
-            <h1 className="text-7xl font-black text-white leading-[0.95] mb-8 tracking-tighter drop-shadow-xl">
+            <h1 className="text-7xl font-black text-slate-900 leading-[0.95] mb-8 tracking-tighter">
               Professional <br />
-              <span className="text-cyan-200">Ads Analytics</span> <br />
-              & Sync.
+              <span className="text-[#4285F4]">Ads Analytics</span> <br />
+              & <span className="text-[#34A853]">Sync</span>.
             </h1>
             
-            <p className="text-xl text-indigo-50 max-w-md leading-relaxed font-medium drop-shadow-sm">
+            <p className="text-xl text-slate-600 max-w-md leading-relaxed font-medium">
               Solusi enterprise untuk otomatisasi pelaporan Facebook & Google Ads. Sinkronisasi data real-time ke WhatsApp dan Google Sheets dalam satu klik.
             </p>
           </div>
@@ -2046,23 +2046,23 @@ ${reportSections}`;
           <div className="relative z-10">
             <div className="grid grid-cols-2 gap-8 max-w-lg">
               <div className="flex flex-col gap-1">
-                <span className="text-4xl font-black text-white tracking-tighter">Real-time</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-indigo-200 font-bold">WhatsApp Reporting</span>
+                <span className="text-4xl font-black text-[#4285F4] tracking-tighter">Real-time</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">WhatsApp Reporting</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-4xl font-black text-white tracking-tighter">Auto</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-indigo-200 font-bold">Google Sheets Sync</span>
+                <span className="text-4xl font-black text-[#34A853] tracking-tighter">Auto</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">Google Sheets Sync</span>
               </div>
             </div>
             
-            <div className="mt-16 text-indigo-200/80 text-xs font-bold tracking-widest uppercase">
+            <div className="mt-16 text-slate-400 text-xs font-bold tracking-widest uppercase">
               &copy; 2026 KAYA RAYA FOUNDATION &bull; PREMIUM ADS AUTOMATION
             </div>
           </div>
         </div>
 
         {/* Right Side - Login/Register Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[#f0f4ff] relative">
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative">
           <div className="absolute top-8 right-8">
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
@@ -2095,7 +2095,7 @@ ${reportSections}`;
                 <button 
                   onClick={handleFirebaseLogin}
                   disabled={isLoggingIn}
-                  className="w-full h-14 rounded-2xl bg-white border-2 border-indigo-100 text-indigo-900 font-black text-base shadow-xl shadow-indigo-500/5 hover:shadow-indigo-500/10 hover:border-indigo-200 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4"
+                  className="w-full h-14 rounded-2xl bg-white border border-slate-200 text-slate-700 font-black text-base shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4"
                 >
                   {isLoggingIn ? <RefreshCw size={20} className="animate-spin" /> : (
                     <>
@@ -2115,7 +2115,7 @@ ${reportSections}`;
                     <div className="w-full border-t border-[var(--border-base)]"></div>
                   </div>
                   <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
-                    <span className="bg-[#f0f4ff] px-4 text-indigo-500">Atau Gunakan Email</span>
+                    <span className="bg-white px-4 text-slate-400">Atau Gunakan Email</span>
                   </div>
                 </div>
 
@@ -2154,7 +2154,7 @@ ${reportSections}`;
                 <button 
                   onClick={() => isRegistering ? handleRegister() : handleLogin()}
                   disabled={isLoggingIn || isRegistering}
-                  className="w-full h-14 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 text-white font-black text-lg shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
+                  className="w-full h-14 rounded-2xl bg-[#4285F4] text-white font-black text-lg shadow-xl shadow-blue-500/20 hover:bg-[#3b78db] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
                 >
                   {isLoggingIn || isRegistering ? <RefreshCw size={20} className="animate-spin" /> : (isRegistering ? 'Daftar Sekarang' : 'Masuk ke Dashboard')}
                 </button>
@@ -2173,10 +2173,10 @@ ${reportSections}`;
               </div>
             </div>
 
-            <div className="mt-16 pt-8 border-t border-indigo-100 flex flex-col items-center gap-3">
-              <div className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Powered By</div>
-              <div className="text-lg font-black text-indigo-900 tracking-tighter">
-                REPORT ADS<span className="text-indigo-600"> KAYA RAYA</span>
+            <div className="mt-16 pt-8 border-t border-slate-100 flex flex-col items-center gap-3">
+              <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Powered By</div>
+              <div className="text-lg font-black text-slate-900 tracking-tighter">
+                <span className="text-[#4285F4]">REPORT</span> <span className="text-[#EA4335]">ADS</span>
               </div>
             </div>
           </div>
@@ -2260,7 +2260,7 @@ ${reportSections}`;
 
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside className="w-[260px] bg-indigo-50/30 dark:bg-[var(--bg-surface)] border-r border-[var(--border-base)] p-6 flex flex-col gap-1 shrink-0 hidden md:flex justify-between">
+        <aside className="w-[260px] bg-white border-r border-slate-200 p-6 flex flex-col gap-1 shrink-0 hidden md:flex justify-between">
           <div className="space-y-8">
             <div>
               <div className="text-[10px] font-black tracking-[0.2em] uppercase text-[var(--text-muted)] px-4 mb-4">Main Menu</div>
@@ -2911,7 +2911,7 @@ ${reportSections}`;
                           <button 
                             onClick={fetchAdsData}
                             disabled={isAdsLoading}
-                            className="w-full h-12 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 text-white font-black text-sm shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
+                            className="w-full h-12 rounded-2xl bg-[#4285F4] text-white font-black text-sm shadow-lg shadow-blue-500/20 hover:bg-[#3b78db] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
                           >
                             {isAdsLoading ? (
                               <><RefreshCw size={18} className="animate-spin" /> Fetching...</>
@@ -2952,18 +2952,18 @@ ${reportSections}`;
 
                 {adsRawData.length > 0 ? (
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-4 mb-6 flex items-center gap-4 shadow-xl shadow-indigo-500/20">
-                      <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-6 flex items-center gap-4 shadow-sm">
+                      <div className="w-10 h-10 bg-[#EA4335] rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-red-500/20">
                         <AlertCircle size={20} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-indigo-100 uppercase tracking-[0.2em] mb-0.5">Reminder</p>
-                        <h4 className="text-sm font-black text-white tracking-tight">JANGAN LUPA EDIT JUMLAH LEADS KAWAN ✨</h4>
+                        <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] mb-0.5">Reminder</p>
+                        <h4 className="text-sm font-black text-slate-900 tracking-tight">JANGAN LUPA EDIT JUMLAH LEADS KAWAN ✨</h4>
                       </div>
                     </div>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-sm font-black text-[var(--text-base)]">Fetch Results ({adsRawData.length})</h3>
-                      <button onClick={importAdsToApp} className="h-10 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
+                      <button onClick={importAdsToApp} className="h-10 px-6 rounded-xl bg-[#4285F4] text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:bg-[#3b78db] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
                         <Download size={14} /> Import to Dashboard
                       </button>
                     </div>
@@ -2992,30 +2992,30 @@ ${reportSections}`;
                           </div>
                           
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Spend</p>
-                              <p className="font-mono font-bold text-indigo-700 text-sm">Rp {fmtNum(c.spend)}</p>
-                            </div>
                             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Leads</p>
+                              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Spend</p>
+                              <p className="font-mono font-bold text-blue-700 text-sm">Rp {fmtNum(c.spend)}</p>
+                            </div>
+                            <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-1">Leads</p>
                               <input 
                                 type="number" 
-                                className="w-full bg-transparent border-none font-mono font-black text-blue-600 text-sm outline-none focus:ring-0 p-0"
+                                className="w-full bg-transparent border-none font-mono font-black text-yellow-700 text-sm outline-none focus:ring-0 p-0"
                                 value={c.leads}
                                 onChange={(e) => handleEditLeads(i, e.target.value)}
                               />
                             </div>
-                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">CPR</p>
-                              <p className="font-mono font-black text-emerald-600 text-sm">Rp {fmtNum(Math.round(c.cpr || 0))}</p>
+                            <div className="bg-green-50 border border-green-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-green-500 uppercase tracking-widest mb-1">CPR</p>
+                              <p className="font-mono font-black text-green-600 text-sm">Rp {fmtNum(Math.round(c.cpr || 0))}</p>
                             </div>
-                            <div className="bg-violet-50 border border-violet-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-1">Impressions</p>
-                              <p className="font-mono font-bold text-violet-700 text-sm">{fmtNum(parseInt(c.impressions))}</p>
+                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Impressions</p>
+                              <p className="font-mono font-bold text-slate-700 text-sm">{fmtNum(parseInt(c.impressions))}</p>
                             </div>
-                            <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest mb-1">Clicks</p>
-                              <p className="font-mono font-bold text-cyan-700 text-sm">{fmtNum(parseInt(c.clicks))}</p>
+                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Clicks</p>
+                              <p className="font-mono font-bold text-slate-700 text-sm">{fmtNum(parseInt(c.clicks))}</p>
                             </div>
                           </div>
                           
@@ -3889,8 +3889,8 @@ function SidebarItem({ icon, label, active, onClick }: { icon: React.ReactNode, 
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all w-full text-left group",
         active 
-          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 dark:bg-indigo-500 dark:shadow-indigo-900/30" 
-          : "text-[var(--text-muted)] hover:bg-indigo-100/50 dark:hover:bg-[var(--bg-subtle)] hover:text-indigo-600 dark:hover:text-[var(--text-base)]"
+          ? "bg-[#4285F4] text-white shadow-lg shadow-blue-500/20" 
+          : "text-slate-500 hover:bg-slate-50 hover:text-[#4285F4]"
       )}
     >
       <span className={cn("transition-colors", active ? "text-white" : "text-[var(--text-muted)] group-hover:text-[var(--text-base)]")}>{icon}</span>
