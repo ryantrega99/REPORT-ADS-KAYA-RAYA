@@ -495,7 +495,7 @@ export default function App() {
     
     const redirectUri = window.location.origin;
     const cleanClientId = googleClientId.trim();
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${cleanClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(GOOGLE_CONFIG.SCOPES)}&prompt=consent`;
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${cleanClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(GOOGLE_CONFIG.SCOPES)}&prompt=select_account consent`;
     
     const popup = window.open(authUrl, 'google_oauth', 'width=600,height=700');
     if (!popup) {
