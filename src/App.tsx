@@ -977,19 +977,19 @@ export default function App() {
         'Date': r => r.date_range,
         'Platform': r => r.platform,
         'Product': r => r.product || '–',
-        'Spend': r => 'Rp ' + (r.spend || 0).toLocaleString('id-ID'),
+        'Spend': r => r.spend || 0,
         'Impressions': r => parseInt(r.impressions) || 0, 
         'Clicks': r => parseInt(r.clicks) || 0,
         'Leads': r => r.leads || 0, 
-        'CPR': r => 'Rp ' + Math.round(r.cpr || 0).toLocaleString('id-ID'),
+        'CPR': r => Math.round(r.cpr || 0),
       },
       ca: {
         'Tanggal Fetch': () => now(), 
         'Product': r => r.product || r.produk || '–',
         'Performance': r => r.performance_label || r.performance_status || '–', 
         'Leads': r => r.leads || 0,
-        'Spend': r => 'Rp ' + (r.spend || 0).toLocaleString('id-ID'),
-        'CPR': r => 'Rp ' + Math.round(r.cpr || 0).toLocaleString('id-ID'),
+        'Spend': r => r.spend || 0,
+        'CPR': r => Math.round(r.cpr || 0),
         'Creative ID': r => r.creative_id || r.id || '–', 
         'Status': r => r.status || 'UNKNOWN',
         'Impressions': r => r.impressions || 0, 
@@ -1475,35 +1475,10 @@ export default function App() {
     try {
       let allProcessed: any[] = [];
       const now = new Date().toLocaleString('id-ID');
-      let dateRangeStr = '';
-      const dToday = new Date();
-      const fmtD = (d: Date) => d.toLocaleDateString('en-CA');
-      if (fbDatePreset === 'custom') {
-        dateRangeStr = `${startDate} to ${endDate}`;
-      } else if (fbDatePreset === 'today') {
-        dateRangeStr = fmtD(dToday);
-      } else if (fbDatePreset === 'yesterday') {
-        const y = new Date(dToday); y.setDate(y.getDate() - 1);
-        dateRangeStr = fmtD(y);
-      } else if (fbDatePreset === 'last_7d') {
-        const past = new Date(dToday); past.setDate(past.getDate() - 6);
-        dateRangeStr = `${fmtD(past)} to ${fmtD(dToday)}`;
-      } else if (fbDatePreset === 'last_30d') {
-        const past = new Date(dToday); past.setDate(past.getDate() - 29);
-        dateRangeStr = `${fmtD(past)} to ${fmtD(dToday)}`;
-      } else if (fbDatePreset === 'this_month') {
-        const firstDay = new Date(dToday.getFullYear(), dToday.getMonth(), 1);
-        dateRangeStr = `${fmtD(firstDay)} to ${fmtD(dToday)}`;
-      } else {
-        dateRangeStr = fbDatePreset;
-      }
 
       // Fetch Facebook Ads
       if (fbTokenTrimmed && fbActiveIds.length > 0) {
-        let fbTotalImpressions = 0;
-        let fbTotalClicks = 0;
-        let fbTotalSpend = 0;
-        let fbTotalLeads = 0;
+        const fbByDate: Record<string, { spend: number, impressions: number, clicks: number, leads: number }> = {};
 
         for (const id of fbActiveIds) {
           let accountId = id.trim();
@@ -1532,43 +1507,47 @@ export default function App() {
           }
           
           (result.data || []).forEach((c: any) => {
-            if (c.status !== 'ACTIVE' && parseFloat(c.spend) === 0) return;
+            const spend = parseFloat(c.spend) || 0;
+            const impressions = parseInt(c.impressions) || 0;
+            if (spend === 0 && impressions === 0) return;
+
+            const date = c.date_start;
+            if (!fbByDate[date]) fbByDate[date] = { spend: 0, impressions: 0, clicks: 0, leads: 0 };
+
             const actions = c.actions || [];
             const leadAct = actions.find((a: any) => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
             const leads = leadAct ? parseInt(leadAct.value) : 0;
-            const spend = parseFloat(c.spend) || 0;
             
-            fbTotalImpressions += parseInt(c.impressions) || 0;
-            fbTotalClicks += parseInt(c.clicks) || 0;
-            fbTotalSpend += spend;
-            fbTotalLeads += leads;
+            fbByDate[date].impressions += impressions;
+            fbByDate[date].clicks += parseInt(c.clicks) || 0;
+            fbByDate[date].spend += spend;
+            fbByDate[date].leads += leads;
           });
         }
 
-        if (fbTotalSpend > 0 || fbTotalImpressions > 0) {
-          allProcessed.push({
-            id: `fb_total`,
-            platform: 'Facebook',
-            impressions: fbTotalImpressions,
-            clicks: fbTotalClicks,
-            spend: fbTotalSpend,
-            leads: fbTotalLeads,
-            ctr: fbTotalImpressions > 0 ? ((fbTotalClicks / fbTotalImpressions) * 100).toFixed(2) + '%' : '0.00%',
-            cpr: fbTotalLeads > 0 ? fbTotalSpend / fbTotalLeads : 0,
-            timestamp: now,
-            date_range: dateRangeStr,
-            user_name: fetchUser || currentUser?.name || 'Unknown',
-            product: fetchProduct,
-          });
-        }
+        Object.entries(fbByDate).forEach(([date, stats]) => {
+          if (stats.spend > 0 || stats.impressions > 0) {
+            allProcessed.push({
+              id: `fb_${date}`,
+              platform: 'Facebook',
+              impressions: stats.impressions,
+              clicks: stats.clicks,
+              spend: stats.spend,
+              leads: stats.leads,
+              ctr: stats.impressions > 0 ? ((stats.clicks / stats.impressions) * 100).toFixed(2) + '%' : '0.00%',
+              cpr: stats.leads > 0 ? stats.spend / stats.leads : 0,
+              timestamp: now,
+              date_range: date,
+              user_name: fetchUser || currentUser?.name || 'Unknown',
+              product: fetchProduct,
+            });
+          }
+        });
       }
 
       // Fetch Google Ads
       if (gadsActiveIds.length > 0) {
-        let gaTotalImpressions = 0;
-        let gaTotalClicks = 0;
-        let gaTotalSpend = 0;
-        let gaTotalLeads = 0;
+        const gaByDate: Record<string, { spend: number, impressions: number, clicks: number, leads: number }> = {};
 
         for (const id of gadsActiveIds) {
           const payload: any = {
@@ -1623,37 +1602,44 @@ export default function App() {
           }
 
           (result.campaigns || []).forEach((c: any) => {
-            if (c.status !== 'ENABLED' && parseFloat(c.spend) === 0) return;
             const spend = parseFloat(c.spend) || 0;
+            const impressions = parseInt(c.impressions) || 0;
+            if (spend === 0 && impressions === 0) return;
+
+            const date = c.tanggal;
+            if (!gaByDate[date]) gaByDate[date] = { spend: 0, impressions: 0, clicks: 0, leads: 0 };
+
             const conv = parseFloat(c.conversions) || 0;
             
-            gaTotalImpressions += parseInt(c.impressions) || 0;
-            gaTotalClicks += parseInt(c.clicks) || 0;
-            gaTotalSpend += spend;
-            gaTotalLeads += Math.round(conv);
+            gaByDate[date].impressions += impressions;
+            gaByDate[date].clicks += parseInt(c.clicks) || 0;
+            gaByDate[date].spend += spend;
+            gaByDate[date].leads += Math.round(conv);
           });
         }
 
-        if (gaTotalSpend > 0 || gaTotalImpressions > 0) {
-          allProcessed.push({
-            id: `ga_total`,
-            platform: 'Google',
-            impressions: gaTotalImpressions,
-            clicks: gaTotalClicks,
-            spend: gaTotalSpend,
-            leads: gaTotalLeads,
-            ctr: gaTotalImpressions > 0 ? ((gaTotalClicks / gaTotalImpressions) * 100).toFixed(2) + '%' : '0.00%',
-            cpr: gaTotalLeads > 0 ? gaTotalSpend / gaTotalLeads : 0,
-            timestamp: now,
-            date_range: dateRangeStr,
-            user_name: fetchUser || currentUser?.name || 'Unknown',
-            product: fetchProduct,
-          });
-        }
+        Object.entries(gaByDate).forEach(([date, stats]) => {
+          if (stats.spend > 0 || stats.impressions > 0) {
+            allProcessed.push({
+              id: `ga_${date}`,
+              platform: 'Google',
+              impressions: stats.impressions,
+              clicks: stats.clicks,
+              spend: stats.spend,
+              leads: stats.leads,
+              ctr: stats.impressions > 0 ? ((stats.clicks / stats.impressions) * 100).toFixed(2) + '%' : '0.00%',
+              cpr: stats.leads > 0 ? stats.spend / stats.leads : 0,
+              timestamp: now,
+              date_range: date,
+              user_name: fetchUser || currentUser?.name || 'Unknown',
+              product: fetchProduct,
+            });
+          }
+        });
       }
 
       setAdsRawData(allProcessed);
-      addToast(`Berhasil mengambil total ${allProcessed.length} kampanye`);
+      addToast(`Berhasil mengambil total ${allProcessed.length} data harian`);
       
       // Auto import to WA menu
       await importAdsToApp(allProcessed);
@@ -1666,6 +1652,17 @@ export default function App() {
     } finally {
       setIsAdsLoading(false);
     }
+  };
+
+  const handleEditLeads = (index: number, val: string) => {
+    const newVal = parseInt(val) || 0;
+    const updated = [...adsRawData];
+    updated[index] = { 
+      ...updated[index], 
+      leads: newVal,
+      cpr: newVal > 0 ? updated[index].spend / newVal : 0
+    };
+    setAdsRawData(updated);
   };
 
   const importAdsToApp = async (dataToImport?: any[] | React.MouseEvent) => {
@@ -1683,7 +1680,7 @@ export default function App() {
         spend: Math.round(c.spend || 0),
         leads: c.leads || 0,
         ctr: typeof c.ctr === 'string' ? c.ctr.replace('%', '') : (c.ctr || 0).toFixed(2),
-        tanggal: new Date().toLocaleDateString('id-ID'),
+        tanggal: c.date_range || new Date().toLocaleDateString('id-ID'),
         date_range: c.date_range || '',
         impressions: c.impressions || 0,
         clicks: c.clicks || 0,
@@ -1922,46 +1919,39 @@ export default function App() {
       return;
     }
 
-    const uTotalSpend = userCamps.reduce((s, c) => s + Math.round(c.spend), 0);
-    const uTotalImpressions = userCamps.reduce((s, c) => s + Math.round(c.impressions || 0), 0);
-    const uTotalClicks = userCamps.reduce((s, c) => s + Math.round(c.clicks || 0), 0);
-    const uTotalLeads = userCamps.reduce((s, c) => s + Math.round(c.leads), 0);
-    
-    let dateStr = userCamps[0]?.date_range || userCamps[0]?.tanggal || new Date().toLocaleDateString('id-ID');
-    
-    const groupedStats: Record<string, { spend: number, impressions: number, clicks: number, leads: number }> = {};
-
+    // Group by Date
+    const dateGroups: Record<string, Campaign[]> = {};
     userCamps.forEach(c => {
-      const platformName = c.platform === 'fb' ? 'Facebook' : 'Google';
-      const key = `${platformName} - ${c.product}`;
-      if (!groupedStats[key]) groupedStats[key] = { spend: 0, impressions: 0, clicks: 0, leads: 0 };
-      groupedStats[key].spend += c.spend;
-      groupedStats[key].impressions += (c.impressions || 0);
-      groupedStats[key].clicks += (c.clicks || 0);
-      groupedStats[key].leads += c.leads;
+      const dateKey = c.date_range || c.tanggal;
+      if (!dateGroups[dateKey]) dateGroups[dateKey] = [];
+      dateGroups[dateKey].push(c);
     });
 
-    const campaignsList = Object.entries(groupedStats)
-      .filter(([_, stats]) => stats.spend > 0 || stats.impressions > 0)
-      .map(([key, stats]) => {
-        const cpr = stats.leads > 0 ? stats.spend / stats.leads : 0;
-        return `=> ${key}\n   Spent: Rp ${fmtNum(Math.round(stats.spend))}\n   Impressions: ${fmtNum(Math.round(stats.impressions))}\n   Clicks: ${fmtNum(Math.round(stats.clicks))}\n   Leads: ${fmtNum(Math.round(stats.leads))}\n   CPR: Rp ${fmtNum(Math.round(cpr))}`;
-      })
-      .join('\n\n');
+    const sortedDates = Object.keys(dateGroups).sort((a, b) => {
+      // Simple date sort (assuming YYYY-MM-DD or similar)
+      return a.localeCompare(b);
+    });
 
-    const uTotalCPR = uTotalLeads > 0 ? uTotalSpend / uTotalLeads : 0;
+    const reportSections = sortedDates.map(date => {
+      const camps = dateGroups[date];
+      const platformStats: Record<string, { spend: number, product: string }> = {};
+      
+      camps.forEach(c => {
+        const platformName = c.platform === 'fb' ? 'Facebook' : 'Google';
+        const key = `${platformName} ${c.product}`;
+        if (!platformStats[key]) platformStats[key] = { spend: 0, product: c.product };
+        platformStats[key].spend += c.spend;
+      });
 
-    const msg = `Laporan Iklan ${dateStr}
-User: ${user.name}
+      const lines = Object.entries(platformStats)
+        .map(([key, stats]) => `=> ${key} = Rp ${fmtNum(Math.round(stats.spend))}`)
+        .join('\n');
 
-${campaignsList}
+      return `Spent Iklan ${date}\n${lines}`;
+    }).join('\n\n');
 
-*TOTAL KESELURUHAN*
-Total Spent = Rp ${fmtNum(uTotalSpend)}
-Total Impressions = ${fmtNum(uTotalImpressions)}
-Total Clicks = ${fmtNum(uTotalClicks)}
-Total Leads = ${fmtNum(uTotalLeads)}
-Total CPR = Rp ${fmtNum(Math.round(uTotalCPR))}`;
+    const msg = `Advertiser Mr.BOB: Advertiser ${user.name}
+${reportSections}`;
 
     setWaMessage(msg);
   };
@@ -3032,7 +3022,12 @@ Total CPR = Rp ${fmtNum(Math.round(uTotalCPR))}`;
                             </div>
                             <div className="bg-blue-50 rounded-xl p-3">
                               <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Leads</p>
-                              <p className="font-mono font-black text-blue-600 text-sm">{c.leads}</p>
+                              <input 
+                                type="number" 
+                                className="w-full bg-transparent border-none font-mono font-black text-blue-600 text-sm outline-none focus:ring-0 p-0"
+                                value={c.leads}
+                                onChange={(e) => handleEditLeads(i, e.target.value)}
+                              />
                             </div>
                             <div className="bg-emerald-50 rounded-xl p-3">
                               <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">CPR</p>

@@ -6,7 +6,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function fmtNum(n: number) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + "jt";
   return n.toLocaleString("id-ID");
 }
 

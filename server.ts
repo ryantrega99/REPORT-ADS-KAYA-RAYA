@@ -460,9 +460,10 @@ app.post("/api/users/delete", async (req, res) => {
       
       const params: any = {
         level: 'campaign',
-        fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,actions',
+        fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,actions,date_start',
         access_token: token,
-        limit: '100'
+        time_increment: '1',
+        limit: '500'
       };
 
       if (datePreset === 'custom') {
