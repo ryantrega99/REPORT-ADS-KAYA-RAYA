@@ -2031,29 +2031,25 @@ ${reportSections}`;
               </div>
             
             <h1 className="text-7xl font-black text-white leading-[0.95] mb-8 tracking-tighter">
-              Automate Your <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Ads Reporting</span> <br />
-              Effortlessly.
+              Professional <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Ads Analytics</span> <br />
+              & Sync.
             </h1>
             
             <p className="text-xl text-[var(--text-muted)] max-w-md leading-relaxed font-medium">
-              Sistem otomatisasi pelaporan Facebook Ads & Google Ads langsung ke WhatsApp tim Anda. Pantau performa iklan secara real-time.
+              Solusi enterprise untuk otomatisasi pelaporan Facebook & Google Ads. Sinkronisasi data real-time ke WhatsApp dan Google Sheets dalam satu klik.
             </p>
           </div>
           
           <div className="relative z-10">
-            <div className="grid grid-cols-3 gap-8 max-w-lg">
+            <div className="grid grid-cols-2 gap-8 max-w-lg">
               <div className="flex flex-col gap-1">
-                <span className="text-4xl font-black text-white tracking-tighter">100%</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold">Automated</span>
+                <span className="text-4xl font-black text-white tracking-tighter">Real-time</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold">WhatsApp Reporting</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-4xl font-black text-white tracking-tighter">Live</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold">Insights</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-4xl font-black text-white tracking-tighter">Direct</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold">WhatsApp</span>
+                <span className="text-4xl font-black text-white tracking-tighter">Auto</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold">Google Sheets Sync</span>
               </div>
             </div>
             
@@ -2083,12 +2079,12 @@ ${reportSections}`;
 
             <div className="mb-12 text-center lg:text-left">
               <h2 className="text-4xl font-black text-[var(--text-base)] mb-3 tracking-tighter">
-                {isRegistering ? 'Buat Akun Baru' : 'Selamat Datang'}
+                {isRegistering ? 'Mulai Sekarang' : 'Enterprise Login'}
               </h2>
               <p className="text-[var(--text-muted)] font-medium">
                 {isRegistering 
-                  ? 'Mulai otomatisasi laporan iklan Anda hari ini.' 
-                  : 'Masuk untuk mengelola dashboard iklan Anda.'}
+                  ? 'Akses dashboard analitik dan sinkronisasi spreadsheet otomatis.' 
+                  : 'Masuk untuk mengelola data iklan dan sinkronisasi Google Sheets.'}
               </p>
             </div>
 
