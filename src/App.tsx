@@ -926,10 +926,23 @@ export default function App() {
 
   const handleFirebaseLogout = async () => {
     try {
+      // Proactively clear state for instant UI feedback
+      setCurrentUser(null);
+      localStorage.removeItem('kayaraya_user');
+      setIsProfileLoading(false);
+      
       await signOut(auth);
       addToast('Berhasil logout', 'info');
+      
+      // Force a clean state by reloading if necessary, 
+      // but usually setting state is enough. 
+      // We'll stick to state first as it's smoother.
     } catch (err: any) {
+      console.error('Logout error:', err);
       addToast('Logout gagal', 'warn');
+      // Fallback: even if Firebase fails, we should clear local state
+      setCurrentUser(null);
+      localStorage.removeItem('kayaraya_user');
     }
   };
   const [newUserName, setNewUserName] = useState('');
@@ -2178,7 +2191,7 @@ ${reportSections}`;
             <Logo className="w-20 h-20 relative z-10 animate-float" />
           </div>
           <div className="flex flex-col items-center gap-4">
-            <div className="text-2xl font-black text-[var(--text-base)] tracking-tighter">REPORT ADS KAYA RAYA</div>
+            <div className="text-2xl font-black text-[var(--text-base)] tracking-tighter">KayaRaya Dashboard</div>
             <div className="flex flex-col items-center gap-3">
               <div className="flex items-center gap-2 text-[var(--text-muted)] font-medium">
                 <RefreshCw size={14} className="animate-spin" />
@@ -3879,6 +3892,75 @@ ${reportSections}`;
                         )}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activePage === 'profile' && (
+              <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                  <div>
+                    <h1 className="text-4xl font-black tracking-tighter text-[var(--text-base)] mb-2">
+                      My Profile
+                    </h1>
+                    <div className="flex items-center gap-2 text-[var(--text-muted)] font-medium">
+                      <UserCircle size={16} />
+                      <span>Manage your account settings and preferences</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-1 space-y-6">
+                    <div className="card text-center p-10">
+                      <div className="relative inline-block mb-6">
+                        {currentUser.photoURL ? (
+                          <img src={currentUser.photoURL} alt="Profile" className="w-32 h-32 rounded-[2.5rem] object-cover border-4 border-[var(--bg-surface)] shadow-xl" />
+                        ) : (
+                          <div className="w-32 h-32 rounded-[2.5rem] flex items-center justify-center text-4xl font-black text-white shadow-xl" style={{ background: currentUser.color }}>
+                            {currentUser.initials}
+                          </div>
+                        )}
+                        <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-sky-600 text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-sky-700 transition-all border-4 border-[var(--bg-surface)]">
+                          <Camera size={18} />
+                        </button>
+                      </div>
+                      <h2 className="text-2xl font-black text-[var(--text-base)] mb-1">{currentUser.name}</h2>
+                      <p className="text-[var(--text-muted)] font-bold uppercase tracking-widest text-xs mb-6">{currentUser.role}</p>
+                      
+                      <button onClick={handleLogout} className="btn btn-outline w-full text-red-500 border-red-200 hover:bg-red-50 hover:border-red-300">
+                        <LogOut size={18} /> Sign Out
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 card p-8">
+                    <h3 className="text-lg font-black text-[var(--text-base)] mb-8">Account Details</h3>
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="label">Full Name</label>
+                          <input className="input h-12" value={currentUser.name} readOnly />
+                        </div>
+                        <div>
+                          <label className="label">Email Address</label>
+                          <input className="input h-12" value={currentUser.email} readOnly />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="label">WhatsApp Number</label>
+                          <input className="input h-12" value={currentUser.whatsapp || '-'} readOnly />
+                        </div>
+                        <div>
+                          <label className="label">Account Status</label>
+                          <div className="h-12 flex items-center px-4 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-xl text-emerald-600 font-bold text-sm">
+                            <CheckCircle2 size={16} className="mr-2" /> {currentUser.status}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
