@@ -50,29 +50,30 @@ async function initFirebase() {
     const adminPass = "kayaraya123";
 
     try {
-      const platformsSnap = await getDocs(collection(db, 'platforms'));
-      memoryPlatforms = platformsSnap.docs.map(doc => doc.data());
-      console.log(`Loaded ${memoryPlatforms.length} platforms from Firestore.`);
-      
-      if (memoryPlatforms.length === 0) {
-        const defaultPlatforms = [
-          { id: 'fb', name: 'Facebook Ads', color: '#4285F4', icon: 'Facebook', status: 'active' },
-          { id: 'google', name: 'Google Ads', color: '#EA4335', icon: 'Search', status: 'active' }
-        ];
-        for (const p of defaultPlatforms) {
-          await setDoc(doc(db, 'platforms', p.id), p);
-          memoryPlatforms.push(p);
-        }
-        console.log("Default platforms initialized.");
-      }
-    } catch (err) {
-      console.error("Error loading platforms from Firestore:", err);
-    }
-
-    try {
       await signInWithEmailAndPassword(auth, adminEmail, adminPass);
       console.log("Server signed in to Firebase successfully.");
       authError = null;
+
+      // Load platforms AFTER successful sign-in to avoid permission errors
+      try {
+        const platformsSnap = await getDocs(collection(db, 'platforms'));
+        memoryPlatforms = platformsSnap.docs.map(doc => doc.data());
+        console.log(`Loaded ${memoryPlatforms.length} platforms from Firestore.`);
+        
+        if (memoryPlatforms.length === 0) {
+          const defaultPlatforms = [
+            { id: 'fb', name: 'Facebook Ads', color: '#4285F4', icon: 'Facebook', status: 'active' },
+            { id: 'google', name: 'Google Ads', color: '#EA4335', icon: 'Search', status: 'active' }
+          ];
+          for (const p of defaultPlatforms) {
+            await setDoc(doc(db, 'platforms', p.id), p);
+            memoryPlatforms.push(p);
+          }
+          console.log("Default platforms initialized.");
+        }
+      } catch (err) {
+        console.error("Error loading platforms from Firestore:", err);
+      }
     } catch (err: any) {
       authError = err.message;
       console.error("CRITICAL: Server failed to sign in to Firebase. Firestore operations will likely fail.", err);
