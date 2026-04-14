@@ -431,6 +431,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Handle TikTok OAuth redirect
+    const params = new URLSearchParams(window.location.search);
+    const ttTokenParam = params.get('tiktok_token');
+    const ttAdvertisersParam = params.get('advertiser_ids');
+    if (ttTokenParam) {
+      setTtToken(ttTokenParam);
+      localStorage.setItem('kayaraya_tt_token', ttTokenParam);
+      if (ttAdvertisersParam) {
+        const ids = ttAdvertisersParam.split(',');
+        setTtAdvertisers(ids);
+        localStorage.setItem('kayaraya_tt_advertisers', JSON.stringify(ids));
+      }
+      addToast('TikTok Ads Connected Successfully!', 'success');
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
     // Handle OAuth popup redirect
     if (window.location.hash.includes('access_token=')) {
       const params = new URLSearchParams(window.location.hash.substring(1));
@@ -3788,6 +3807,12 @@ ${reportSections}`;
                         ))}
                       </div>
                       <button onClick={saveAutomationConfig} className="btn btn-primary w-full h-11 mt-4 bg-pink-600 hover:bg-pink-700 border-none">Save TikTok Config</button>
+                      <button 
+                        onClick={() => window.location.href = '/api/tiktok/auth'} 
+                        className="btn btn-outline w-full h-11 mt-2 border-pink-200 text-pink-600 hover:bg-pink-50"
+                      >
+                        <Zap size={16} className="mr-2" /> Connect via TikTok OAuth
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -950,6 +950,52 @@ app.post("/api/platforms/delete", async (req, res) => {
     }
   });
 
+// --- TikTok OAuth ---
+const TIKTOK_APP_ID = process.env.TIKTOK_APP_ID || "7628504693093711873";
+const TIKTOK_SECRET = process.env.TIKTOK_SECRET || ""; // isi di .env
+
+app.get("/api/tiktok/auth", (req, res) => {
+  const redirectUri = encodeURIComponent("https://report-ads-kaya-raya.vercel.app/api/tiktok/callback");
+  const authUrl = `https://business-api.tiktok.com/portal/auth?app_id=${TIKTOK_APP_ID}&state=mrbob&redirect_uri=${redirectUri}`;
+  res.redirect(authUrl);
+});
+
+app.get("/api/tiktok/callback", async (req, res) => {
+  try {
+    const { auth_code, state } = req.query;
+
+    if (!auth_code) {
+      return res.status(400).send("Auth code tidak ditemukan");
+    }
+
+    // Tukar auth_code jadi access token
+    const tokenRes = await fetch("https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        app_id: TIKTOK_APP_ID,
+        secret: TIKTOK_SECRET,
+        auth_code: auth_code,
+        grant_type: "authorization_code"
+      })
+    });
+
+    const data = await tokenRes.json();
+
+    if (data.code !== 0) {
+      return res.status(400).json({ ok: false, error: data.message });
+    }
+
+    const { access_token, advertiser_ids } = data.data;
+
+    // Redirect ke frontend dengan token
+    res.redirect(`/?tiktok_token=${access_token}&advertiser_ids=${advertiser_ids.join(",")}`);
+
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Vite middleware for development
 if (process.env.NODE_ENV !== "production") {
   const { createServer: createViteServer } = await import("vite");
