@@ -22,6 +22,14 @@ export interface Creative {
   thruplays?: number;
 }
 
+export interface Platform {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  status: 'active' | 'inactive';
+}
+
 export interface User {
   id: string;
   name: string;

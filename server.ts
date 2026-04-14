@@ -33,6 +33,7 @@ const CAMPAIGNS_FILE = path.join(DATA_DIR, "campaigns.json");
 
 // In-memory cache (synced with Firestore)
 let memoryUsers: any[] = [];
+let memoryPlatforms: any[] = [];
 let memoryData: any = {};
 
 async function initFirebase() {
@@ -47,6 +48,26 @@ async function initFirebase() {
     // Sign in server to allow Firestore writes
     const adminEmail = "lkbimrbob@gmail.com";
     const adminPass = "kayaraya123";
+
+    try {
+      const platformsSnap = await getDocs(collection(db, 'platforms'));
+      memoryPlatforms = platformsSnap.docs.map(doc => doc.data());
+      console.log(`Loaded ${memoryPlatforms.length} platforms from Firestore.`);
+      
+      if (memoryPlatforms.length === 0) {
+        const defaultPlatforms = [
+          { id: 'fb', name: 'Facebook Ads', color: '#4285F4', icon: 'Facebook', status: 'active' },
+          { id: 'google', name: 'Google Ads', color: '#EA4335', icon: 'Search', status: 'active' }
+        ];
+        for (const p of defaultPlatforms) {
+          await setDoc(doc(db, 'platforms', p.id), p);
+          memoryPlatforms.push(p);
+        }
+        console.log("Default platforms initialized.");
+      }
+    } catch (err) {
+      console.error("Error loading platforms from Firestore:", err);
+    }
 
     try {
       await signInWithEmailAndPassword(auth, adminEmail, adminPass);
@@ -78,6 +99,26 @@ async function ensureDataDir() {
       console.log(`Loaded ${memoryUsers.length} users from Firestore.`);
     } catch (err) {
       console.error("Error loading users from Firestore:", err);
+    }
+
+    try {
+      const platformsSnap = await getDocs(collection(db, 'platforms'));
+      memoryPlatforms = platformsSnap.docs.map(doc => doc.data());
+      console.log(`Loaded ${memoryPlatforms.length} platforms from Firestore.`);
+      
+      if (memoryPlatforms.length === 0) {
+        const defaultPlatforms = [
+          { id: 'fb', name: 'Facebook Ads', color: '#4285F4', icon: 'Facebook', status: 'active' },
+          { id: 'google', name: 'Google Ads', color: '#EA4335', icon: 'Search', status: 'active' }
+        ];
+        for (const p of defaultPlatforms) {
+          await setDoc(doc(db, 'platforms', p.id), p);
+          memoryPlatforms.push(p);
+        }
+        console.log("Default platforms initialized.");
+      }
+    } catch (err) {
+      console.error("Error loading platforms from Firestore:", err);
     }
 
     try {
@@ -413,6 +454,66 @@ app.post("/api/users/delete", async (req, res) => {
     }
   } catch (err: any) {
     console.error("Delete user error:", err);
+    res.status(500).json({ ok: false, error: err.message || "Server error" });
+  }
+});
+
+// --- Platform Management ---
+
+app.get("/api/platforms", async (req, res) => {
+  try {
+    await ensureAuth();
+    const platformsSnap = await getDocs(collection(db, 'platforms'));
+    const platforms = platformsSnap.docs.map(doc => doc.data());
+    res.json({ ok: true, platforms });
+  } catch (err: any) {
+    console.error("Get platforms error:", err);
+    res.status(500).json({ ok: false, error: `Get platforms error: ${err.message || err}` });
+  }
+});
+
+app.post("/api/platforms/add", async (req, res) => {
+  try {
+    await ensureAuth();
+    const newPlatform = req.body;
+    if (!newPlatform.id) {
+      newPlatform.id = Math.random().toString(36).substring(2, 9);
+    }
+    await setDoc(doc(db, 'platforms', newPlatform.id), newPlatform);
+    memoryPlatforms.push(newPlatform);
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("Add platform error:", err);
+    res.status(500).json({ ok: false, error: err.message || "Server error" });
+  }
+});
+
+app.post("/api/platforms/update", async (req, res) => {
+  try {
+    await ensureAuth();
+    const updatedPlatform = req.body;
+    if (!updatedPlatform.id) {
+      return res.status(400).json({ ok: false, error: "Platform ID wajib diisi" });
+    }
+    await setDoc(doc(db, 'platforms', updatedPlatform.id), updatedPlatform);
+    const idx = memoryPlatforms.findIndex(p => p.id === updatedPlatform.id);
+    if (idx !== -1) memoryPlatforms[idx] = updatedPlatform;
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("Update platform error:", err);
+    res.status(500).json({ ok: false, error: err.message || "Server error" });
+  }
+});
+
+app.post("/api/platforms/delete", async (req, res) => {
+  try {
+    await ensureAuth();
+    const { id } = req.body;
+    await deleteDoc(doc(db, 'platforms', id));
+    memoryPlatforms = memoryPlatforms.filter(p => p.id !== id);
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("Delete platform error:", err);
     res.status(500).json({ ok: false, error: err.message || "Server error" });
   }
 });

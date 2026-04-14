@@ -43,7 +43,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Campaign, Creative, PRODUCTS } from './types';
+import { User, Campaign, Creative, Platform, PRODUCTS } from './types';
 import { cn, fmtNum, generateLocalId } from './lib/utils';
 import { 
   auth, 
@@ -369,6 +369,14 @@ export default function App() {
     return true;
   });
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [adminTab, setAdminTab] = useState<'users' | 'platforms'>('users');
+  const [isAddingPlatform, setIsAddingPlatform] = useState(false);
+  const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null);
+  const [newPlatformName, setNewPlatformName] = useState('');
+  const [newPlatformColor, setNewPlatformColor] = useState('#4285F4');
+  const [newPlatformIcon, setNewPlatformIcon] = useState('Target');
+  const [newPlatformStatus, setNewPlatformStatus] = useState<'active' | 'inactive'>('active');
 
   useEffect(() => {
     if (isDarkMode) {
@@ -832,11 +840,27 @@ export default function App() {
     }
   };
 
+  const fetchPlatforms = async () => {
+    try {
+      const res = await fetch('/api/platforms');
+      const result = await res.json();
+      if (result.ok) {
+        setPlatforms(result.platforms);
+      }
+    } catch (err) {
+      console.error('Error fetching platforms:', err);
+    }
+  };
+
   // Real-time Users Listener (Replaced with polling/manual fetch for Express compatibility)
   useEffect(() => {
     if (!currentUser) return;
     fetchUsers();
-    const interval = setInterval(fetchUsers, 30000); // Poll every 30s
+    fetchPlatforms();
+    const interval = setInterval(() => {
+      fetchUsers();
+      fetchPlatforms();
+    }, 30000); // Poll every 30s
     return () => clearInterval(interval);
   }, [currentUser]);
 
@@ -1167,6 +1191,74 @@ export default function App() {
       // Rollback on error
       setUsers(previousUsers);
       addToast('Gagal menghapus user: ' + error.message, 'warn');
+    }
+  };
+
+  const handleAddPlatform = async () => {
+    if (!newPlatformName) return;
+    try {
+      const res = await fetch('/api/platforms/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newPlatformName,
+          color: newPlatformColor,
+          icon: newPlatformIcon,
+          status: newPlatformStatus
+        })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        addToast('Platform berhasil ditambahkan!');
+        setIsAddingPlatform(false);
+        setNewPlatformName('');
+        fetchPlatforms();
+      }
+    } catch (err) {
+      addToast('Gagal menambah platform', 'warn');
+    }
+  };
+
+  const handleUpdatePlatform = async () => {
+    if (!editingPlatform || !newPlatformName) return;
+    try {
+      const res = await fetch('/api/platforms/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editingPlatform,
+          name: newPlatformName,
+          color: newPlatformColor,
+          icon: newPlatformIcon,
+          status: newPlatformStatus
+        })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        addToast('Platform berhasil diupdate!');
+        setEditingPlatform(null);
+        setIsAddingPlatform(false);
+        fetchPlatforms();
+      }
+    } catch (err) {
+      addToast('Gagal update platform', 'warn');
+    }
+  };
+
+  const handleDeletePlatform = async (id: string) => {
+    try {
+      const res = await fetch('/api/platforms/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        addToast('Platform berhasil dihapus!');
+        fetchPlatforms();
+      }
+    } catch (err) {
+      addToast('Gagal menghapus platform', 'warn');
     }
   };
 
@@ -2268,7 +2360,7 @@ ${reportSections}`;
                 <SidebarItem icon={<LayoutDashboard size={18} />} label="Dashboard" active={activePage === 'dashboard'} onClick={() => setActivePage('dashboard')} />
                 <SidebarItem icon={<MessageSquare size={18} />} label="Kirim Laporan WA" active={activePage === 'wa'} onClick={() => setActivePage('wa')} />
                 {currentUser.role === 'admin' && (
-                  <SidebarItem icon={<Users size={18} />} label="Manajemen User" active={activePage === 'admin'} onClick={() => setActivePage('admin')} />
+                  <SidebarItem icon={<Users size={18} />} label="Command Center" active={activePage === 'admin'} onClick={() => setActivePage('admin')} />
                 )}
               </div>
             </div>
@@ -2525,148 +2617,239 @@ ${reportSections}`;
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                   <div>
                     <h1 className="text-4xl font-black tracking-tighter text-[var(--text-base)] mb-2">
-                      User Management
+                      {adminTab === 'users' ? 'User Management' : 'Platform Management'}
                     </h1>
                     <div className="flex items-center gap-2 text-[var(--text-muted)] font-medium">
-                      <Users size={16} />
-                      <span>Manage your team of advertisers and system access</span>
+                      {adminTab === 'users' ? <Users size={16} /> : <Target size={16} />}
+                      <span>{adminTab === 'users' ? 'Manage your team of advertisers and system access' : 'Manage advertising platforms and integrations'}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
-                      <input 
-                        className="input h-12 pl-12 w-full sm:w-64" 
-                        placeholder="Search users..." 
-                        value={userSearch}
-                        onChange={(e) => setUserSearch(e.target.value)}
-                      />
-                    </div>
-                    <button 
-                      onClick={() => setIsAddingUser(true)}
-                      className="btn btn-primary h-12 px-6 shadow-xl shadow-blue-500/20"
-                    >
-                      <Plus size={20} /> Add New User
-                    </button>
+                    {adminTab === 'users' ? (
+                      <>
+                        <div className="relative">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+                          <input 
+                            className="input h-12 pl-12 w-full sm:w-64" 
+                            placeholder="Search users..." 
+                            value={userSearch}
+                            onChange={(e) => setUserSearch(e.target.value)}
+                          />
+                        </div>
+                        <button 
+                          onClick={() => setIsAddingUser(true)}
+                          className="btn btn-primary h-12 px-6 shadow-xl shadow-blue-500/20"
+                        >
+                          <Plus size={20} /> Add New User
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => {
+                          setEditingPlatform(null);
+                          setNewPlatformName('');
+                          setNewPlatformColor('#4285F4');
+                          setNewPlatformIcon('Target');
+                          setNewPlatformStatus('active');
+                          setIsAddingPlatform(true);
+                        }}
+                        className="btn btn-primary h-12 px-6 shadow-xl shadow-blue-500/20"
+                      >
+                        <Plus size={20} /> Add New Platform
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                  <MetricCard label="Total Spend (Team)" value={`Rp ${fmtNum(totalSpend)}`} change="▲ team" trend="up" platform="all" />
-                  <MetricCard label="Total Leads (Team)" value={totalLeads.toString()} change="▲ all users" trend="up" platform="all" />
-                  <MetricCard label="Total Campaigns" value={campaigns.length.toString()} change="→ active" trend="neu" platform="all" />
+                <div className="flex items-center gap-1 bg-[var(--bg-subtle)] p-1 rounded-2xl w-fit mb-8">
+                  <button 
+                    onClick={() => setAdminTab('users')}
+                    className={cn(
+                      "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                      adminTab === 'users' ? "bg-white text-indigo-600 shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-base)]"
+                    )}
+                  >
+                    Users
+                  </button>
+                  <button 
+                    onClick={() => setAdminTab('platforms')}
+                    className={cn(
+                      "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                      adminTab === 'platforms' ? "bg-white text-indigo-600 shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-base)]"
+                    )}
+                  >
+                    Platforms
+                  </button>
                 </div>
 
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Active Team Members</h3>
-                  <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Showing {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase())).length} users</div>
-                </div>
+                {adminTab === 'users' ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                      <MetricCard label="Total Spend (Team)" value={`Rp ${fmtNum(totalSpend)}`} change="▲ team" trend="up" platform="all" />
+                      <MetricCard label="Total Leads (Team)" value={totalLeads.toString()} change="▲ all users" trend="up" platform="all" />
+                      <MetricCard label="Total Campaigns" value={campaigns.length.toString()} change="→ active" trend="neu" platform="all" />
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
-                  {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase())).map(u => {
-                    const userCamps = (data[u.id]?.campaigns || []);
-                    const uSpend = userCamps.reduce((s, c) => s + c.spend, 0);
-                    const uLeads = userCamps.reduce((s, c) => s + c.leads, 0);
-                    const uFbSpend = userCamps.filter(c => c.platform === 'fb').reduce((s, c) => s + c.spend, 0);
-                    const uGSpend = userCamps.filter(c => c.platform === 'google').reduce((s, c) => s + c.spend, 0);
-                    const maxBar = Math.max(uSpend, 1);
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Active Team Members</h3>
+                      <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Showing {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase())).length} users</div>
+                    </div>
 
-                    return (
-                      <div key={u.id} className="bento-card group hover:border-blue-200 transition-all">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
+                      {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase())).map(u => {
+                        const userCamps = (data[u.id]?.campaigns || []);
+                        const uSpend = userCamps.reduce((s, c) => s + c.spend, 0);
+                        const uLeads = userCamps.reduce((s, c) => s + c.leads, 0);
+                        const uFbSpend = userCamps.filter(c => c.platform === 'fb').reduce((s, c) => s + c.spend, 0);
+                        const uGSpend = userCamps.filter(c => c.platform === 'google').reduce((s, c) => s + c.spend, 0);
+                        const maxBar = Math.max(uSpend, 1);
+
+                        return (
+                          <div key={u.id} className="bento-card group hover:border-blue-200 transition-all">
+                            <div className="flex items-start justify-between mb-6">
+                              <div className="flex items-center gap-4 cursor-pointer" onClick={() => { setUserFilter(u.id); setActivePage('dashboard'); }}>
+                                <div 
+                                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black shadow-lg overflow-hidden" 
+                                  style={{ background: `${u.color}15`, color: u.color, border: `2px solid ${u.color}30` }}
+                                >
+                                  {u.photoURL ? (
+                                    <img src={u.photoURL} alt={u.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                  ) : (
+                                    u.initials
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-black text-[var(--text-base)] group-hover:text-indigo-600 transition-colors">{u.name}</div>
+                                  <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest mt-1">{u.role} &bull; {u.status || 'Aktif'}</div>
+                                  <div className="text-[10px] text-[var(--text-muted)] font-medium mt-1 flex items-center gap-1">
+                                    <MessageSquare size={10} /> {u.whatsapp || '-'}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setEditingUser(u); }}
+                                  className="w-8 h-8 rounded-xl flex items-center justify-center bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition-all"
+                                >
+                                  <Settings size={14} />
+                                </button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); if(window.confirm(`Hapus user ${u.name}?`)) handleDeleteUser(u.id); }}
+                                  className="w-8 h-8 rounded-xl flex items-center justify-center bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 transition-all"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div className="flex items-end justify-between">
+                                <div>
+                                  <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Total Spend</div>
+                                  <div className="text-2xl font-black text-[var(--text-base)] tracking-tighter">Rp {fmtNum(uSpend)}</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Leads</div>
+                                  <div className="text-sm font-black text-[var(--text-base)]">{uLeads} <span className="text-[10px] text-[var(--text-muted)] font-bold">Leads</span></div>
+                                </div>
+                              </div>
+
+                              <div className="pt-4 border-t border-[var(--border-base)] space-y-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 text-[9px] font-black text-blue-600 uppercase tracking-widest">FB Ads</div>
+                                  <div className="flex-1 h-1.5 bg-[var(--bg-subtle)] rounded-full overflow-hidden">
+                                    <motion.div 
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${(uFbSpend / maxBar) * 100}%` }}
+                                      className="h-full bg-blue-600"
+                                    />
+                                  </div>
+                                  <div className="w-16 text-right text-[10px] font-black text-[var(--text-base)]">Rp {fmtNum(uFbSpend)}</div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 text-[9px] font-black text-red-600 uppercase tracking-widest">Google</div>
+                                  <div className="flex-1 h-1.5 bg-[var(--bg-subtle)] rounded-full overflow-hidden">
+                                    <motion.div 
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${(uGSpend / maxBar) * 100}%` }}
+                                      className="h-full bg-red-600"
+                                    />
+                                  </div>
+                                  <div className="w-16 text-right text-[10px] font-black text-[var(--text-base)]">Rp {fmtNum(uGSpend)}</div>
+                                </div>
+                              </div>
+
+                              <div className="pt-4 flex flex-col gap-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock size={12} />
+                                    Joined {u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '-'}
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <Target size={12} />
+                                    {u.assignedProducts?.length || 0} Products
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                                  <History size={12} />
+                                  Last Login: {u.lastLogin ? new Date(u.lastLogin).toLocaleString('id-ID') : 'Never'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
+                    {platforms.map(p => (
+                      <div key={p.id} className="bento-card group hover:border-blue-200 transition-all">
                         <div className="flex items-start justify-between mb-6">
-                          <div className="flex items-center gap-4 cursor-pointer" onClick={() => { setUserFilter(u.id); setActivePage('dashboard'); }}>
+                          <div className="flex items-center gap-4">
                             <div 
-                              className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black shadow-lg overflow-hidden" 
-                              style={{ background: `${u.color}15`, color: u.color, border: `2px solid ${u.color}30` }}
+                              className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black shadow-lg" 
+                              style={{ background: `${p.color}15`, color: p.color, border: `2px solid ${p.color}30` }}
                             >
-                              {u.photoURL ? (
-                                <img src={u.photoURL} alt={u.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                              ) : (
-                                u.initials
-                              )}
+                              <Target size={24} />
                             </div>
                             <div>
-                              <div className="font-black text-[var(--text-base)] group-hover:text-indigo-600 transition-colors">{u.name}</div>
-                              <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest mt-1">{u.role} &bull; {u.status || 'Aktif'}</div>
-                              <div className="text-[10px] text-[var(--text-muted)] font-medium mt-1 flex items-center gap-1">
-                                <MessageSquare size={10} /> {u.whatsapp || '-'}
-                              </div>
+                              <div className="font-black text-[var(--text-base)]">{p.name}</div>
+                              <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest mt-1">Status: {p.status}</div>
                             </div>
                           </div>
                           <div className="flex gap-2">
                             <button 
-                              onClick={(e) => { e.stopPropagation(); setEditingUser(u); }}
-                              className="w-8 h-8 rounded-xl flex items-center justify-center bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition-all"
+                              onClick={() => {
+                                setEditingPlatform(p);
+                                setNewPlatformName(p.name);
+                                setNewPlatformColor(p.color);
+                                setNewPlatformIcon(p.icon);
+                                setNewPlatformStatus(p.status);
+                                setIsAddingPlatform(true);
+                              }}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:bg-indigo-50 hover:text-indigo-600 transition-all"
                             >
                               <Settings size={14} />
                             </button>
                             <button 
-                              onClick={(e) => { e.stopPropagation(); if(window.confirm(`Hapus user ${u.name}?`)) handleDeleteUser(u.id); }}
+                              onClick={() => { if(window.confirm(`Hapus platform ${p.name}?`)) handleDeletePlatform(p.id); }}
                               className="w-8 h-8 rounded-xl flex items-center justify-center bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 transition-all"
                             >
                               <Trash2 size={14} />
                             </button>
                           </div>
                         </div>
-
-                        <div className="space-y-4">
-                          <div className="flex items-end justify-between">
-                            <div>
-                              <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Total Spend</div>
-                              <div className="text-2xl font-black text-[var(--text-base)] tracking-tighter">Rp {fmtNum(uSpend)}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Leads</div>
-                              <div className="text-sm font-black text-[var(--text-base)]">{uLeads} <span className="text-[10px] text-[var(--text-muted)] font-bold">Leads</span></div>
-                            </div>
-                          </div>
-
-                          <div className="pt-4 border-t border-[var(--border-base)] space-y-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 text-[9px] font-black text-blue-600 uppercase tracking-widest">FB Ads</div>
-                              <div className="flex-1 h-1.5 bg-[var(--bg-subtle)] rounded-full overflow-hidden">
-                                <motion.div 
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${(uFbSpend / maxBar) * 100}%` }}
-                                  className="h-full bg-blue-600"
-                                />
-                              </div>
-                              <div className="w-16 text-right text-[10px] font-black text-[var(--text-base)]">Rp {fmtNum(uFbSpend)}</div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 text-[9px] font-black text-red-600 uppercase tracking-widest">Google</div>
-                              <div className="flex-1 h-1.5 bg-[var(--bg-subtle)] rounded-full overflow-hidden">
-                                <motion.div 
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${(uGSpend / maxBar) * 100}%` }}
-                                  className="h-full bg-red-600"
-                                />
-                              </div>
-                              <div className="w-16 text-right text-[10px] font-black text-[var(--text-base)]">Rp {fmtNum(uGSpend)}</div>
-                            </div>
-                          </div>
-
-                          <div className="pt-4 flex flex-col gap-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5">
-                                <Clock size={12} />
-                                Joined {u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '-'}
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <Target size={12} />
-                                {u.assignedProducts?.length || 0} Products
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
-                              <History size={12} />
-                              Last Login: {u.lastLogin ? new Date(u.lastLogin).toLocaleString('id-ID') : 'Never'}
-                            </div>
-                          </div>
-                        </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                    {platforms.length === 0 && (
+                      <div className="col-span-full py-20 text-center bg-[var(--bg-subtle)] rounded-[2.5rem] border-2 border-dashed border-[var(--border-base)]">
+                        <Target size={40} className="mx-auto text-[var(--border-base)] mb-4" />
+                        <p className="text-[var(--text-muted)] font-bold">No platforms configured</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -3560,7 +3743,62 @@ ${reportSections}`;
         <MobileNavItem icon={<Settings size={20} />} active={activePage === 'setup'} onClick={() => setActivePage('setup')} />
       </nav>
 
-      {/* Modal Add User */}
+      {/* Modal Add/Edit Platform */}
+      <AnimatePresence>
+        {isAddingPlatform && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsAddingPlatform(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-md bg-[var(--bg-surface)] rounded-[2.5rem] shadow-2xl shadow-indigo-900/10 overflow-hidden">
+              <div className="p-8 border-b border-[var(--border-base)] flex justify-between items-center">
+                <h2 className="text-2xl font-black tracking-tighter text-[var(--text-base)]">
+                  {editingPlatform ? 'Edit Platform' : 'Add New Platform'}
+                </h2>
+                <button onClick={() => setIsAddingPlatform(false)} className="w-10 h-10 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] transition-all">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div>
+                  <label className="label">Platform Name</label>
+                  <input className="input h-12" value={newPlatformName} onChange={(e) => setNewPlatformName(e.target.value)} placeholder="e.g. TikTok Ads" />
+                </div>
+                <div>
+                  <label className="label">Brand Color</label>
+                  <div className="flex gap-3 mt-2">
+                    {['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#000000', '#FF0050', '#00f2ea'].map(c => (
+                      <button 
+                        key={c} 
+                        onClick={() => setNewPlatformColor(c)}
+                        className={cn(
+                          "w-8 h-8 rounded-full border-2 transition-all",
+                          newPlatformColor === c ? "border-slate-900 scale-110" : "border-transparent"
+                        )}
+                        style={{ background: c }}
+                      />
+                    ))}
+                    <input type="color" value={newPlatformColor} onChange={(e) => setNewPlatformColor(e.target.value)} className="w-8 h-8 rounded-full overflow-hidden p-0 border-none cursor-pointer" />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Status</label>
+                  <select className="input h-12" value={newPlatformStatus} onChange={(e) => setNewPlatformStatus(e.target.value as any)}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+              <div className="p-8 border-t border-[var(--border-base)] bg-[var(--bg-subtle)]/50">
+                <button 
+                  onClick={editingPlatform ? handleUpdatePlatform : handleAddPlatform} 
+                  className="btn btn-primary w-full h-14 text-lg"
+                >
+                  {editingPlatform ? 'Update Platform' : 'Create Platform'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {isAddingUser && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
