@@ -51,7 +51,7 @@ export interface User {
 export interface Campaign {
   id: string;
   name: string;
-  platform: 'fb' | 'google';
+  platform: 'fb' | 'google' | 'tiktok';
   product: string;
   spend: number;
   leads: number;

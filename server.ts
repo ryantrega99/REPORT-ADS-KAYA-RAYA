@@ -587,6 +587,68 @@ app.post("/api/platforms/delete", async (req, res) => {
     }
   });
 
+  // --- TikTok Ads Proxy ---
+
+  app.post("/api/tiktok-ads", async (req, res) => {
+    try {
+      const { advertiserId, token, startDate, endDate, datePreset } = req.body;
+      
+      // Map date presets to TikTok format if needed, but TikTok usually takes start/end date
+      let start = startDate;
+      let end = endDate;
+
+      if (datePreset !== 'custom') {
+        const now = new Date();
+        if (datePreset === 'today') {
+          start = now.toISOString().split('T')[0];
+          end = start;
+        } else if (datePreset === 'yesterday') {
+          const yest = new Date(now);
+          yest.setDate(yest.getDate() - 1);
+          start = yest.toISOString().split('T')[0];
+          end = start;
+        } else if (datePreset === 'last_7d') {
+          const s = new Date(now);
+          s.setDate(s.getDate() - 7);
+          start = s.toISOString().split('T')[0];
+          end = now.toISOString().split('T')[0];
+        } else if (datePreset === 'last_30d') {
+          const s = new Date(now);
+          s.setDate(s.getDate() - 30);
+          start = s.toISOString().split('T')[0];
+          end = now.toISOString().split('T')[0];
+        }
+      }
+
+      const params = new URLSearchParams({
+        advertiser_id: advertiserId,
+        report_type: 'BASIC',
+        data_level: 'AUCTION_CAMPAIGN',
+        dimensions: JSON.stringify(['stat_time_day']),
+        metrics: JSON.stringify(['spend', 'impressions', 'clicks', 'conversion']),
+        start_date: start,
+        end_date: end,
+        page_size: '100'
+      });
+
+      const url = `https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/?` + params.toString();
+      const ttRes = await fetch(url, {
+        headers: {
+          'Access-Token': token
+        }
+      });
+      const result = await ttRes.json();
+      
+      if (result.code !== 0) {
+        return res.status(400).json({ ok: false, error: result.message || "TikTok API Error" });
+      }
+      
+      res.json({ ok: true, data: result.data.list });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // --- WhatsApp (Fonnte) Proxy ---
 
   app.post("/api/wa/send", async (req, res) => {
@@ -1062,6 +1124,53 @@ async function runAutomationForUser(user: any) {
           }
         } catch (e) {
           console.error(`Automation GAds Global Error for ${user.email}:`, e);
+        }
+      }
+    }
+
+    // 3. Fetch TikTok Ads
+    if (user.ttToken && user.ttAdvertisers && user.ttAdvertisers.length > 0) {
+      for (const advertiserId of user.ttAdvertisers) {
+        if (!advertiserId.trim()) continue;
+        try {
+          const params = new URLSearchParams({
+            advertiser_id: advertiserId.trim(),
+            report_type: 'BASIC',
+            data_level: 'AUCTION_CAMPAIGN',
+            dimensions: JSON.stringify(['stat_time_day', 'campaign_name']),
+            metrics: JSON.stringify(['spend', 'conversion']),
+            start_date: yesterdayStr,
+            end_date: todayStr,
+            page_size: '100'
+          });
+
+          const url = `https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/?` + params.toString();
+          const res = await fetch(url, {
+            headers: { 'Access-Token': user.ttToken }
+          });
+          const result = await res.json();
+          
+          if (result.code === 0 && result.data && result.data.list) {
+            result.data.list.forEach((c: any) => {
+              const spend = parseFloat(c.metrics.spend || '0');
+              if (spend <= 0) return;
+
+              const item = {
+                name: `TikTok ${c.dimensions.campaign_name}`,
+                spend: spend,
+                leads: parseInt(c.metrics.conversion || '0')
+              };
+              
+              const date = c.dimensions.stat_time_day.split(' ')[0];
+              if (date === yesterdayStr) {
+                yesterdayCampaigns.push(item);
+              } else if (date === todayStr) {
+                todayCampaigns.push(item);
+              }
+            });
+          }
+        } catch (e) {
+          console.error(`Automation TikTok Error for ${user.email}:`, e);
         }
       }
     }

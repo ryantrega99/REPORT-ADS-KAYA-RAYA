@@ -651,6 +651,7 @@ export default function App() {
   // Setup State
   const [fbToken, setFbToken] = useState(localStorage.getItem('kayaraya_fb_token') || '');
   const [gadsRefreshToken, setGadsRefreshToken] = useState(localStorage.getItem('kayaraya_gads_refresh_token') || '');
+  const [ttToken, setTtToken] = useState(localStorage.getItem('kayaraya_tt_token') || '');
   const [fbAdvertisers, setFbAdvertisers] = useState<string[]>(() => {
     const saved = localStorage.getItem('kayaraya_fb_advertisers_v2');
     if (saved) {
@@ -694,6 +695,16 @@ export default function App() {
     }
     const oldCid = localStorage.getItem('kayaraya_gads_cid');
     return oldCid ? [oldCid] : [''];
+  });
+  const [ttAdvertisers, setTtAdvertisers] = useState<string[]>(() => {
+    const saved = localStorage.getItem('kayaraya_tt_advertisers');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) { console.error('Error parsing ttAdvertisers', e); }
+    }
+    return [''];
   });
 
   // Creatives State
@@ -1520,10 +1531,12 @@ export default function App() {
         addToast('Automation configuration saved to cloud!');
         localStorage.setItem('kayaraya_fb_token', fbToken);
         localStorage.setItem('kayaraya_gads_refresh_token', gadsRefreshToken);
+        localStorage.setItem('kayaraya_tt_token', ttToken);
         localStorage.setItem('kayaraya_wa_token', waToken);
         localStorage.setItem('kayaraya_wa_target', waTarget);
         localStorage.setItem('kayaraya_fb_advertisers_v2', JSON.stringify(fbAdvertisers));
         localStorage.setItem('kayaraya_gads_advertisers', JSON.stringify(gadsAdvertisers));
+        localStorage.setItem('kayaraya_tt_advertisers', JSON.stringify(ttAdvertisers));
       } else {
         throw new Error(result.error);
       }
@@ -1534,16 +1547,18 @@ export default function App() {
 
   const fetchAdsData = async () => {
     const fbTokenTrimmed = fbToken.trim();
+    const ttTokenTrimmed = ttToken.trim();
     const fbActiveIds = fbAdvertisers.filter(id => id.trim() !== '');
     const gadsActiveIds = gadsAdvertisers.filter(id => id.trim() !== '');
+    const ttActiveIds = ttAdvertisers.filter(id => id.trim() !== '');
 
-    if ((!fbTokenTrimmed || fbActiveIds.length === 0) && gadsActiveIds.length === 0) {
-      addToast('Lengkapi konfigurasi Facebook Ads atau Google Ads terlebih dahulu', 'warn');
+    if ((!fbTokenTrimmed || fbActiveIds.length === 0) && gadsActiveIds.length === 0 && (!ttTokenTrimmed || ttActiveIds.length === 0)) {
+      addToast('Lengkapi konfigurasi Facebook Ads, Google Ads, atau TikTok Ads terlebih dahulu', 'warn');
       return;
     }
 
     setIsAdsLoading(true);
-    addToast('Mengambil data dari Facebook & Google Ads...', 'info');
+    addToast('Mengambil data dari Facebook, Google & TikTok Ads...', 'info');
     
     try {
       let allProcessed: any[] = [];
@@ -1711,6 +1726,66 @@ export default function App() {
         });
       }
 
+      // Fetch TikTok Ads
+      if (ttTokenTrimmed && ttActiveIds.length > 0) {
+        const ttByDate: Record<string, { spend: number, impressions: number, clicks: number, leads: number }> = {};
+
+        for (const id of ttActiveIds) {
+          const res = await fetch('/api/tiktok-ads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              advertiserId: id.trim(),
+              token: ttTokenTrimmed,
+              datePreset: fbDatePreset, // Reuse preset
+              startDate,
+              endDate
+            })
+          });
+          
+          const result = await res.json();
+
+          if (!result.ok) {
+            console.error(`TikTok API Error (${id}):`, result.error);
+            addToast(`Gagal ambil data TikTok ${id}: ${result.error}`, 'warn');
+            continue;
+          }
+          
+          (result.data || []).forEach((c: any) => {
+            const spend = parseFloat(c.metrics.spend) || 0;
+            const impressions = parseInt(c.metrics.impressions) || 0;
+            if (spend === 0 && impressions === 0) return;
+
+            const date = c.dimensions.stat_time_day.split(' ')[0];
+            if (!ttByDate[date]) ttByDate[date] = { spend: 0, impressions: 0, clicks: 0, leads: 0 };
+
+            ttByDate[date].impressions += impressions;
+            ttByDate[date].clicks += parseInt(c.metrics.clicks) || 0;
+            ttByDate[date].spend += spend;
+            ttByDate[date].leads += parseInt(c.metrics.conversion) || 0;
+          });
+        }
+
+        Object.entries(ttByDate).forEach(([date, stats]) => {
+          if (stats.spend > 0 || stats.impressions > 0) {
+            allProcessed.push({
+              id: `tt_${date}`,
+              platform: 'TikTok',
+              impressions: stats.impressions,
+              clicks: stats.clicks,
+              spend: stats.spend,
+              leads: stats.leads,
+              ctr: stats.impressions > 0 ? ((stats.clicks / stats.impressions) * 100).toFixed(2) + '%' : '0.00%',
+              cpr: stats.leads > 0 ? stats.spend / stats.leads : 0,
+              timestamp: now,
+              date_range: date,
+              user_name: fetchUser || currentUser?.name || 'Unknown',
+              product: fetchProduct,
+            });
+          }
+        });
+      }
+
       setAdsRawData(allProcessed);
       addToast(`Berhasil mengambil total ${allProcessed.length} data harian`);
       
@@ -1744,7 +1819,7 @@ export default function App() {
       const camp: any = {
         id: c.id,
         name: c.platform + ' Ads Total',
-        platform: c.platform === 'Facebook' ? 'fb' : 'google',
+        platform: c.platform === 'Facebook' ? 'fb' : (c.platform === 'TikTok' ? 'tiktok' : 'google'),
         product: fetchProduct === 'all' ? PRODUCTS[0] : fetchProduct,
         spend: Math.round(c.spend || 0),
         leads: c.leads || 0,
@@ -1966,6 +2041,7 @@ export default function App() {
   const totalLeads = campaigns.reduce((s, c) => s + c.leads, 0);
   const fbSpend = campaigns.filter(c => c.platform === 'fb').reduce((s, c) => s + c.spend, 0);
   const gSpend = campaigns.filter(c => c.platform === 'google').reduce((s, c) => s + c.spend, 0);
+  const ttSpend = campaigns.filter(c => c.platform === 'tiktok').reduce((s, c) => s + c.spend, 0);
 
   // --- WA Logic ---
 
@@ -2455,6 +2531,7 @@ ${reportSections}`;
                       <option value="all">All Platforms</option>
                       <option value="fb">Facebook Ads</option>
                       <option value="google">Google Ads</option>
+                      <option value="tiktok">TikTok Ads</option>
                     </select>
 
                     {currentUser.role === 'admin' && (
@@ -2472,11 +2549,12 @@ ${reportSections}`;
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-10">
                   <MetricCard label="Total Spend" value={`Rp ${fmtNum(totalSpend)}`} change="+12.5%" trend="up" platform="all" />
                   <MetricCard label="Total Leads" value={totalLeads.toString()} change="+18.2%" trend="up" platform="all" />
                   <MetricCard label="FB Spend" value={`Rp ${fmtNum(fbSpend)}`} change="+8.4%" trend="up" platform="fb" />
                   <MetricCard label="Google Spend" value={`Rp ${fmtNum(gSpend)}`} change="+15.1%" trend="up" platform="google" />
+                  <MetricCard label="TikTok Spend" value={`Rp ${fmtNum(ttSpend)}`} change="+20.5%" trend="up" platform="tiktok" />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
@@ -3052,6 +3130,9 @@ ${reportSections}`;
                             <button onClick={testGadsConnection} className="btn btn-outline h-11 px-3 shrink-0" title="Test Google Ads Connection">
                               <Globe size={16} />
                             </button>
+                            <button onClick={() => addToast('TikTok Ads Connection Test: Success (Mock)', 'info')} className="btn btn-outline h-11 px-3 shrink-0" title="Test TikTok Ads Connection">
+                              <Zap size={16} className="text-pink-500" />
+                            </button>
                           </div>
                           
                           {fbDatePreset === 'custom' && (
@@ -3157,9 +3238,11 @@ ${reportSections}`;
                             <div className="flex items-center gap-3">
                               <div className={cn(
                                 "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                                c.platform === 'Facebook' ? "bg-blue-50 text-blue-600" : "bg-red-50 text-red-600"
+                                c.platform === 'Facebook' ? "bg-blue-50 text-blue-600" : 
+                                c.platform === 'TikTok' ? "bg-pink-50 text-pink-600" : "bg-red-50 text-red-600"
                               )}>
-                                {c.platform === 'Facebook' ? <Facebook size={20} /> : <Globe size={20} />}
+                                {c.platform === 'Facebook' ? <Facebook size={20} /> : 
+                                 c.platform === 'TikTok' ? <Zap size={20} /> : <Globe size={20} />}
                               </div>
                               <div>
                                 <h4 className="font-bold text-sm text-[var(--text-base)]">{c.product || 'Unknown Product'}</h4>
@@ -3168,7 +3251,8 @@ ${reportSections}`;
                             </div>
                             <span className={cn(
                               "px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
-                              c.platform === 'Facebook' ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"
+                              c.platform === 'Facebook' ? "bg-blue-100 text-blue-700" : 
+                              c.platform === 'TikTok' ? "bg-pink-100 text-pink-700" : "bg-red-100 text-red-700"
                             )}>
                               {c.platform}
                             </span>
@@ -3662,6 +3746,48 @@ ${reportSections}`;
                         saveAutomationConfig();
                         testGadsConnection();
                       }} className="btn btn-primary w-full h-11 mt-4 bg-red-600 hover:bg-red-700 border-none">Save & Test Connection</button>
+                    </div>
+                  </div>
+
+                  <div className="bento-card">
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-12 h-12 rounded-2xl bg-pink-50 text-pink-600 flex items-center justify-center">
+                        <Zap size={24} />
+                      </div>
+                      <div>
+                        <h3 className="font-black text-[var(--text-base)]">TikTok Ads API</h3>
+                        <p className="text-xs text-[var(--text-muted)] font-medium">For TikTok Marketing</p>
+                      </div>
+                    </div>
+                    <div className="space-y-5">
+                      <div>
+                        <label className="label">Access Token</label>
+                        <input className="input h-11" type="password" value={ttToken} onChange={(e) => setTtToken(e.target.value)} placeholder="TTPxxxx..." />
+                      </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Advertiser IDs</h4>
+                        <button onClick={() => setTtAdvertisers([...ttAdvertisers, ''])} className="text-[10px] font-bold text-pink-600 flex items-center gap-1 hover:underline">
+                          <Plus size={12} /> Add ID
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {ttAdvertisers.map((id, idx) => (
+                          <div key={idx} className="flex gap-2 items-center bg-[var(--bg-subtle)] p-2 rounded-xl border border-[var(--border-base)]">
+                            <input className="input h-9 text-xs py-1.5 flex-1" value={id} onChange={(e) => {
+                              const newIds = [...ttAdvertisers];
+                              newIds[idx] = e.target.value;
+                              setTtAdvertisers(newIds);
+                            }} placeholder="7123..." />
+                            <button onClick={() => {
+                              const newIds = ttAdvertisers.filter((_, i) => i !== idx);
+                              setTtAdvertisers(newIds.length ? newIds : ['']);
+                            }} className="p-1.5 text-[var(--text-muted)] hover:text-red-600 transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={saveAutomationConfig} className="btn btn-primary w-full h-11 mt-4 bg-pink-600 hover:bg-pink-700 border-none">Save TikTok Config</button>
                     </div>
                   </div>
                 </div>
@@ -4167,21 +4293,26 @@ function Pill({ label, active, onClick }: { label: string, active: boolean, onCl
   );
 }
 
-function MetricCard({ label, value, change, trend, platform }: { label: string, value: string, change: string, trend: 'up' | 'down' | 'neu', platform: 'fb' | 'google' | 'all' }) {
+function MetricCard({ label, value, change, trend, platform }: { label: string, value: string, change: string, trend: 'up' | 'down' | 'neu', platform: 'fb' | 'google' | 'tiktok' | 'all' }) {
   return (
     <div className="bento-card group">
       <div className={cn(
         "absolute -right-8 -top-8 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500",
-        platform === 'fb' ? "bg-blue-600" : platform === 'google' ? "bg-red-600" : "bg-indigo-600"
+        platform === 'fb' ? "bg-blue-600" : platform === 'google' ? "bg-red-600" : platform === 'tiktok' ? "bg-pink-600" : "bg-indigo-600"
       )}></div>
       
       <div className="flex items-center justify-between mb-6">
         <span className="text-[10px] font-black text-[var(--text-muted)] tracking-[0.2em] uppercase">{label}</span>
         <div className={cn(
           "w-8 h-8 rounded-xl flex items-center justify-center",
-          platform === 'fb' ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : platform === 'google' ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
+          platform === 'fb' ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : 
+          platform === 'google' ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" : 
+          platform === 'tiktok' ? "bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" : 
+          "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
         )}>
-          {platform === 'fb' ? <Facebook size={14} /> : platform === 'google' ? <Globe size={14} /> : <TrendingUp size={14} />}
+          {platform === 'fb' ? <Facebook size={14} /> : 
+           platform === 'google' ? <Globe size={14} /> : 
+           platform === 'tiktok' ? <Zap size={14} /> : <TrendingUp size={14} />}
         </div>
       </div>
       
