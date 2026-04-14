@@ -73,10 +73,8 @@ const GOOGLE_CONFIG = {
 // --- Components ---
 
 const Logo = ({ className = "w-8 h-8" }: { className?: string }) => (
-  <div className={cn("bg-white rounded-lg flex items-center justify-center font-bold text-xs shadow-md border border-slate-100", className)}>
-    <span className="text-[#4285F4]">A</span>
-    <span className="text-[#EA4335]">D</span>
-    <span className="text-[#FBBC05]">S</span>
+  <div className={cn("bg-sky-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-sky-500/20", className)}>
+    <Zap size={className.includes('w-20') ? 40 : (className.includes('w-16') ? 32 : (className.includes('w-14') ? 28 : 16))} fill="currentColor" />
   </div>
 );
 
@@ -374,7 +372,7 @@ export default function App() {
   const [isAddingPlatform, setIsAddingPlatform] = useState(false);
   const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null);
   const [newPlatformName, setNewPlatformName] = useState('');
-  const [newPlatformColor, setNewPlatformColor] = useState('#4285F4');
+  const [newPlatformColor, setNewPlatformColor] = useState('#6366f1');
   const [newPlatformIcon, setNewPlatformIcon] = useState('Target');
   const [newPlatformStatus, setNewPlatformStatus] = useState<'active' | 'inactive'>('active');
 
@@ -2204,85 +2202,85 @@ ${reportSections}`;
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex bg-[var(--bg-base)] font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
+      <div className="min-h-screen flex bg-[var(--bg-base)] font-sans selection:bg-sky-500/30 selection:text-sky-900">
         {/* Left Side - Branding & Info */}
-        <div className="hidden lg:flex lg:w-1/2 bg-[#f8f9fa] relative overflow-hidden flex-col justify-between p-20 border-r border-slate-200">
+        <div className="hidden lg:flex lg:w-1/2 bg-slate-900 relative overflow-hidden flex-col justify-between p-20">
           {/* Abstract Background Elements */}
-          <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full bg-blue-500/5 blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] rounded-full bg-green-500/5 blur-[120px]"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full bg-sky-500/10 blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] rounded-full bg-teal-500/10 blur-[120px]"></div>
           
           <div className="relative z-10">
               <div className="flex items-center gap-4 mb-16">
-                <Logo className="w-14 h-14 shadow-xl" />
-                <div className="text-4xl font-black tracking-tighter text-slate-900">
-                  <span className="text-[#4285F4]">REPORT</span> <span className="text-[#EA4335]">ADS</span>
+                <Logo className="w-14 h-14" />
+                <div className="text-4xl font-bold tracking-tighter text-white">
+                  KayaRaya<span className="text-sky-500"> Dashboard</span>
                 </div>
               </div>
             
-            <h1 className="text-7xl font-black text-slate-900 leading-[0.95] mb-8 tracking-tighter">
-              Professional <br />
-              <span className="text-[#4285F4]">Ads Analytics</span> <br />
-              & <span className="text-[#34A853]">Sync</span>.
+            <h1 className="text-8xl font-bold text-white leading-[0.9] mb-8 tracking-tighter">
+              Master Your <br />
+              <span className="text-sky-500">Ads Data</span> <br />
+              Flow.
             </h1>
             
-            <p className="text-xl text-slate-600 max-w-md leading-relaxed font-medium">
-              Solusi enterprise untuk otomatisasi pelaporan Facebook & Google Ads. Sinkronisasi data real-time ke WhatsApp dan Google Sheets dalam satu klik.
+            <p className="text-xl text-slate-400 max-w-md leading-relaxed font-medium">
+              Enterprise-grade automation for Meta, Google & TikTok Ads. Real-time synchronization to your mission-critical dashboards.
             </p>
           </div>
           
           <div className="relative z-10">
-            <div className="grid grid-cols-2 gap-8 max-w-lg">
-              <div className="flex flex-col gap-1">
-                <span className="text-4xl font-black text-[#4285F4] tracking-tighter">Real-time</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">WhatsApp Reporting</span>
+            <div className="grid grid-cols-2 gap-12 max-w-lg">
+              <div className="flex flex-col gap-2">
+                <span className="text-5xl font-bold text-white tracking-tighter">99.9%</span>
+                <span className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-bold">Uptime Reliability</span>
               </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-4xl font-black text-[#34A853] tracking-tighter">Auto</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">Google Sheets Sync</span>
+              <div className="flex flex-col gap-2">
+                <span className="text-5xl font-bold text-sky-500 tracking-tighter">Instant</span>
+                <span className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-bold">Data Propagation</span>
               </div>
             </div>
             
-            <div className="mt-16 text-slate-400 text-xs font-bold tracking-widest uppercase">
-              &copy; 2026 KAYA RAYA FOUNDATION &bull; PREMIUM ADS AUTOMATION
+            <div className="mt-16 text-slate-600 text-[10px] font-bold tracking-[0.4em] uppercase">
+              &copy; 2026 KAYA RAYA &bull; NEXT-GEN ADS INFRASTRUCTURE
             </div>
           </div>
         </div>
 
         {/* Right Side - Login/Register Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative">
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[var(--bg-surface)] relative">
           <div className="absolute top-8 right-8">
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-3 rounded-full bg-[var(--bg-surface)] border border-[var(--border-base)] text-[var(--text-muted)] hover:text-[var(--text-base)] shadow-sm transition-all"
+              className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-base)] text-[var(--text-muted)] hover:text-[var(--text-base)] shadow-sm transition-all"
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
           </div>
-          <div className="w-full max-w-[420px]">
-            <div className="lg:hidden flex items-center gap-3 mb-12 justify-center">
-              <Logo className="w-12 h-12 shadow-xl shadow-indigo-500/10" />
-              <div className="text-3xl font-black tracking-tighter text-[var(--text-base)]">
-                REPORT ADS<span className="text-indigo-600 dark:text-indigo-500"> KAYA RAYA</span>
+          <div className="w-full max-w-[400px]">
+            <div className="lg:hidden flex flex-col items-center gap-4 mb-12">
+              <Logo className="w-16 h-16" />
+              <div className="text-3xl font-bold tracking-tighter text-[var(--text-base)]">
+                KayaRaya<span className="text-sky-600"> Dashboard</span>
               </div>
             </div>
 
-            <div className="mb-12 text-center lg:text-left">
-              <h2 className="text-4xl font-black text-[var(--text-base)] mb-3 tracking-tighter">
-                {isRegistering ? 'Mulai Sekarang' : 'Enterprise Login'}
+            <div className="mb-10 text-center lg:text-left">
+              <h2 className="text-4xl font-bold text-[var(--text-base)] mb-3 tracking-tighter">
+                {isRegistering ? 'Create Account' : 'Welcome Back'}
               </h2>
               <p className="text-[var(--text-muted)] font-medium">
                 {isRegistering 
-                  ? 'Akses dashboard analitik dan sinkronisasi spreadsheet otomatis.' 
-                  : 'Masuk untuk mengelola data iklan dan sinkronisasi Google Sheets.'}
+                  ? 'Join the elite ads management platform.' 
+                  : 'Access your global advertising command center.'}
               </p>
             </div>
 
             <div className="space-y-6">
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <button 
                   onClick={handleFirebaseLogin}
                   disabled={isLoggingIn}
-                  className="w-full h-14 rounded-2xl bg-white border border-slate-200 text-slate-700 font-black text-base shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4"
+                  className="w-full h-14 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-base)] text-[var(--text-base)] font-bold text-base shadow-sm hover:bg-[var(--bg-subtle)] hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3"
                 >
                   {isLoggingIn ? <RefreshCw size={20} className="animate-spin" /> : (
                     <>
@@ -2292,78 +2290,73 @@ ${reportSections}`;
                         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                       </svg>
-                      Masuk dengan Google
+                      Continue with Google
                     </>
                   )}
                 </button>
 
-                <div className="relative my-8">
+                <div className="relative py-4">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-[var(--border-base)]"></div>
                   </div>
-                  <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
-                    <span className="bg-white px-4 text-slate-400">Atau Gunakan Email</span>
+                  <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-[0.2em]">
+                    <span className="bg-[var(--bg-surface)] px-4 text-[var(--text-muted)]">Or use credentials</span>
                   </div>
                 </div>
 
-                <div>
-                  <label className="label">Alamat Email</label>
-                  <input 
-                    className="input h-13" 
-                    type="email" 
-                    placeholder="name@company.com" 
-                    value={isRegistering ? regEmail : loginEmail}
-                    onChange={(e) => isRegistering ? setRegEmail(e.target.value) : setLoginEmail(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="label mb-0">Password</label>
-                    {!isRegistering && (
-                      <button 
-                        onClick={handleForgotPassword}
-                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-                      >
-                        Lupa Password?
-                      </button>
-                    )}
+                <div className="space-y-4">
+                  <div>
+                    <label className="label">Email Address</label>
+                    <input 
+                      className="input h-12" 
+                      type="email" 
+                      placeholder="admin@kayaraya.com" 
+                      value={isRegistering ? regEmail : loginEmail}
+                      onChange={(e) => isRegistering ? setRegEmail(e.target.value) : setLoginEmail(e.target.value)}
+                    />
                   </div>
-                  <input 
-                    className="input h-13" 
-                    type="password" 
-                    placeholder="••••••••" 
-                    value={isRegistering ? regPass : loginPass}
-                    onChange={(e) => isRegistering ? setRegPass(e.target.value) : setLoginPass(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (isRegistering ? handleRegister() : handleLogin())}
-                  />
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="label mb-0">Password</label>
+                      {!isRegistering && (
+                        <button 
+                          onClick={handleForgotPassword}
+                          className="text-[10px] font-bold text-sky-600 hover:text-sky-700 transition-colors"
+                        >
+                          Forgot?
+                        </button>
+                      )}
+                    </div>
+                    <input 
+                      className="input h-12" 
+                      type="password" 
+                      placeholder="••••••••" 
+                      value={isRegistering ? regPass : loginPass}
+                      onChange={(e) => isRegistering ? setRegPass(e.target.value) : setLoginPass(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (isRegistering ? handleRegister() : handleLogin())}
+                    />
+                  </div>
                 </div>
                 
                 <button 
                   onClick={() => isRegistering ? handleRegister() : handleLogin()}
                   disabled={isLoggingIn || isRegistering}
-                  className="w-full h-14 rounded-2xl bg-[#4285F4] text-white font-black text-lg shadow-xl shadow-blue-500/20 hover:bg-[#3b78db] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
+                  className="btn btn-primary w-full h-12 mt-2"
                 >
-                  {isLoggingIn || isRegistering ? <RefreshCw size={20} className="animate-spin" /> : (isRegistering ? 'Daftar Sekarang' : 'Masuk ke Dashboard')}
+                  {isLoggingIn || isRegistering ? <RefreshCw size={20} className="animate-spin" /> : (isRegistering ? 'Create Account' : 'Sign In')}
                 </button>
 
                 <div className="text-center mt-6">
-                  <p className="text-sm text-[var(--text-muted)] font-medium">
-                    {isRegistering ? 'Sudah punya akun?' : 'Belum punya akun?'}
+                  <p className="text-xs text-[var(--text-muted)] font-medium">
+                    {isRegistering ? 'Already have an account?' : 'Need an account?'}
                     <button 
                       onClick={() => setIsRegistering(!isRegistering)}
-                      className="ml-1.5 font-black text-indigo-600 hover:text-indigo-800 transition-colors"
+                      className="ml-1.5 font-bold text-sky-600 hover:text-sky-800 transition-colors"
                     >
-                      {isRegistering ? 'Masuk Sekarang' : 'Daftar Gratis'}
+                      {isRegistering ? 'Sign In' : 'Register Now'}
                     </button>
                   </p>
                 </div>
-              </div>
-            </div>
-
-            <div className="mt-16 pt-8 border-t border-slate-100 flex flex-col items-center gap-3">
-              <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Powered By</div>
-              <div className="text-lg font-black text-slate-900 tracking-tighter">
-                <span className="text-[#4285F4]">REPORT</span> <span className="text-[#EA4335]">ADS</span>
               </div>
             </div>
           </div>
@@ -2389,58 +2382,63 @@ ${reportSections}`;
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-base)] selection:bg-indigo-500/30 selection:text-indigo-200">
       {/* Topbar */}
-      <header className="h-18 bg-[var(--bg-surface)]/80 backdrop-blur-md border-b border-[var(--border-base)] px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Logo className="w-9 h-9 shadow-lg shadow-indigo-500/10" />
-          <div className="text-2xl font-black tracking-tighter text-[var(--text-base)]">
-            REPORT ADS<span className="text-indigo-600 dark:text-indigo-500"> KAYA RAYA</span>
+      <header className="h-16 md:h-18 bg-[var(--bg-surface)] border-b border-[var(--border-base)] px-4 md:px-8 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-2 md:gap-3">
+          <Logo className="w-8 h-8 md:w-9 md:h-9" />
+          <div className="text-lg md:text-2xl font-bold tracking-tighter text-[var(--text-base)]">
+            KayaRaya<span className="text-sky-600"> Dashboard</span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-full">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">System Online</span>
+        <div className="flex items-center gap-2 md:gap-4">
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-xl">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Live System</span>
           </div>
 
           <button 
-            onClick={() => setIsGoogleApiModalOpen(true)}
-            className="hidden md:flex items-center gap-2 px-4 py-2 bg-[var(--bg-surface)] border border-[var(--border-base)] rounded-xl hover:border-indigo-300 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20 transition-all group"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="p-2 md:p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-base)] text-[var(--text-muted)] hover:text-[var(--text-base)] transition-all"
+            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
-            <div className="w-5 h-5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
-              <Globe size={12} className="text-indigo-600 dark:text-indigo-400" />
+            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          <button 
+            onClick={() => setIsGoogleApiModalOpen(true)}
+            className="hidden md:flex items-center gap-2 px-4 py-2 bg-[var(--bg-surface)] border border-[var(--border-base)] rounded-xl hover:border-sky-300 hover:bg-sky-50/30 dark:hover:bg-sky-900/20 transition-all group"
+          >
+            <div className="w-5 h-5 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center group-hover:bg-sky-100 dark:group-hover:bg-sky-900/50 transition-colors">
+              <Globe size={12} className="text-sky-600 dark:text-sky-400" />
             </div>
             <span className="text-xs font-bold text-[var(--text-muted)] group-hover:text-[var(--text-base)]">Google API</span>
           </button>
           
-          <div className="h-8 w-[1px] bg-[var(--border-base)] mx-2"></div>
+          <div className="hidden sm:block h-8 w-[1px] bg-[var(--border-base)] mx-1 md:mx-2"></div>
 
-          <div className="flex items-center gap-3 p-1.5 pr-4 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-full hover:border-indigo-300 dark:hover:border-indigo-700 cursor-pointer transition-all group" onClick={() => setActivePage('profile')}>
+          <div className="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 md:pr-4 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-full hover:border-sky-300 dark:hover:border-sky-700 cursor-pointer transition-all group" onClick={() => setActivePage('profile')}>
             {currentUser.photoURL ? (
-              <img src={currentUser.photoURL} alt="profile" className="w-8 h-8 rounded-full object-cover border-2 border-[var(--bg-surface)] shadow-sm" referrerPolicy="no-referrer" />
+              <img src={currentUser.photoURL} alt="profile" className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover border-2 border-[var(--bg-surface)] shadow-sm" referrerPolicy="no-referrer" />
             ) : (
               <div 
-                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border-2 border-[var(--bg-surface)] shadow-sm"
+                className="w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-black border-2 border-[var(--bg-surface)] shadow-sm"
                 style={{ 
-                  background: currentUser.role === 'admin' ? '#4f46e5' : currentUser.color, 
+                  background: currentUser.role === 'admin' ? '#0ea5e9' : currentUser.color, 
                   color: '#fff' 
                 }}
               >
                 {currentUser.initials}
               </div>
             )}
-            <div className="flex flex-col">
+            <div className="hidden sm:flex flex-col">
               <span className="text-xs font-bold text-[var(--text-base)] leading-none mb-0.5">
                 {currentUser.name}
-                {currentUser.email === 'lkbimrbob@gmail.com' && (
-                  <span className="ml-2 text-[8px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Super Admin</span>
-                )}
               </span>
               <span className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-wider">{currentUser.role}</span>
             </div>
           </div>
           
-          <button onClick={handleLogout} className="p-2.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all">
-            <LogOut size={20} />
+          <button onClick={handleLogout} className="p-2 md:p-2.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all">
+            <LogOut size={18} md:size={20} />
           </button>
         </div>
       </header>
@@ -2502,30 +2500,30 @@ ${reportSections}`;
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-10 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
           <AnimatePresence mode="wait">
             {activePage === 'dashboard' && (
               <motion.div key="dash" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8 md:mb-10">
                   <div>
-                    <h1 className="text-4xl font-black tracking-tighter text-[var(--text-base)] mb-2">
+                    <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-[var(--text-base)] mb-1 md:mb-2">
                       Dashboard
                     </h1>
-                    <div className="flex items-center gap-2 text-[var(--text-muted)] font-medium">
-                      <LayoutDashboard size={16} />
+                    <div className="flex items-center gap-2 text-[var(--text-muted)] font-medium text-xs md:text-sm">
+                      <LayoutDashboard size={14} className="md:size-4" />
                       <span>Overview performance for {currentUser.role === 'admin' ? (userFilter === 'all' ? 'All Advertisers' : users.find(u => u.id === userFilter)?.name) : 'Your Campaigns'}</span>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <button onClick={() => setActivePage('wa')} className="btn btn-primary">
+                    <button onClick={() => setActivePage('wa')} className="btn btn-primary w-full md:w-auto py-2.5 md:py-3">
                       <MessageSquare size={18} /> Send Report
                     </button>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-6 mb-8 p-2 bg-[var(--bg-surface)] border border-[var(--border-base)] rounded-[2rem] shadow-sm">
-                  <div className="flex items-center gap-1 p-1 bg-[var(--bg-subtle)] rounded-2xl">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8 p-3 md:p-2 bg-[var(--bg-surface)] border border-[var(--border-base)] rounded-2xl md:rounded-[2rem] shadow-sm">
+                  <div className="flex items-center gap-1 p-1 bg-[var(--bg-subtle)] rounded-xl md:rounded-2xl overflow-x-auto no-scrollbar">
                     <Pill label="Today" active={dateRange === 'today'} onClick={() => setDateRange('today')} />
                     <Pill label="Yesterday" active={dateRange === 'yesterday'} onClick={() => setDateRange('yesterday')} />
                     <Pill label="7 Days" active={dateRange === '7d'} onClick={() => setDateRange('7d')} />
@@ -2533,42 +2531,44 @@ ${reportSections}`;
                     <Pill label="Custom" active={dateRange === 'custom'} onClick={() => setDateRange('custom')} />
                   </div>
                   
-                  <div className="flex items-center gap-3 pr-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 lg:pr-4">
                     {dateRange === 'custom' && (
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-xl">
-                        <input type="date" className="bg-transparent border-none text-xs font-bold outline-none text-[var(--text-base)]" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                      <div className="flex items-center gap-2 px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-xl">
+                        <input type="date" className="bg-transparent border-none text-[10px] md:text-xs font-bold outline-none text-[var(--text-base)] w-full" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                         <span className="text-[var(--text-muted)]">&mdash;</span>
-                        <input type="date" className="bg-transparent border-none text-xs font-bold outline-none text-[var(--text-base)]" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                        <input type="date" className="bg-transparent border-none text-[10px] md:text-xs font-bold outline-none text-[var(--text-base)] w-full" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                       </div>
                     )}
                     
-                    <select 
-                      className="bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-all text-[var(--text-base)]"
-                      value={platformFilter}
-                      onChange={(e) => setPlatformFilter(e.target.value as any)}
-                    >
-                      <option value="all">All Platforms</option>
-                      <option value="fb">Facebook Ads</option>
-                      <option value="google">Google Ads</option>
-                      <option value="tiktok">TikTok Ads</option>
-                    </select>
-
-                    {currentUser.role === 'admin' && (
+                    <div className="flex gap-2">
                       <select 
-                        className="bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-all text-[var(--text-base)]"
-                        value={userFilter}
-                        onChange={(e) => setUserFilter(e.target.value)}
+                        className="flex-1 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-xl px-3 md:px-4 py-2 text-[10px] md:text-xs font-bold outline-none focus:border-sky-500 transition-all text-[var(--text-base)]"
+                        value={platformFilter}
+                        onChange={(e) => setPlatformFilter(e.target.value as any)}
                       >
-                        <option value="all">All Users</option>
-                        {users.filter(u => u.role === 'user').map(u => (
-                          <option key={u.id} value={u.id}>{u.name}</option>
-                        ))}
+                        <option value="all">All Platforms</option>
+                        <option value="fb">Facebook Ads</option>
+                        <option value="google">Google Ads</option>
+                        <option value="tiktok">TikTok Ads</option>
                       </select>
-                    )}
+
+                      {currentUser.role === 'admin' && (
+                        <select 
+                          className="flex-1 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-xl px-3 md:px-4 py-2 text-[10px] md:text-xs font-bold outline-none focus:border-sky-500 transition-all text-[var(--text-base)]"
+                          value={userFilter}
+                          onChange={(e) => setUserFilter(e.target.value)}
+                        >
+                          <option value="all">All Users</option>
+                          {users.filter(u => u.role === 'user').map(u => (
+                            <option key={u.id} value={u.id}>{u.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-10">
+                <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 mb-8 md:mb-10">
                   <MetricCard label="Total Spend" value={`Rp ${fmtNum(totalSpend)}`} change="+12.5%" trend="up" platform="all" />
                   <MetricCard label="Total Leads" value={totalLeads.toString()} change="+18.2%" trend="up" platform="all" />
                   <MetricCard label="FB Spend" value={`Rp ${fmtNum(fbSpend)}`} change="+8.4%" trend="up" platform="fb" />
@@ -2745,7 +2745,7 @@ ${reportSections}`;
                         onClick={() => {
                           setEditingPlatform(null);
                           setNewPlatformName('');
-                          setNewPlatformColor('#4285F4');
+                          setNewPlatformColor('#6366f1');
                           setNewPlatformIcon('Target');
                           setNewPlatformStatus('active');
                           setIsAddingPlatform(true);
@@ -3194,7 +3194,7 @@ ${reportSections}`;
                           <button 
                             onClick={fetchAdsData}
                             disabled={isAdsLoading}
-                            className="w-full h-12 rounded-2xl bg-[#4285F4] text-white font-black text-sm shadow-lg shadow-blue-500/20 hover:bg-[#3b78db] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
+                            className="w-full h-12 rounded-xl bg-indigo-600 text-white font-bold text-sm shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-4"
                           >
                             {isAdsLoading ? (
                               <><RefreshCw size={18} className="animate-spin" /> Fetching...</>
@@ -3246,7 +3246,7 @@ ${reportSections}`;
                     </div>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-sm font-black text-[var(--text-base)]">Fetch Results ({adsRawData.length})</h3>
-                      <button onClick={importAdsToApp} className="h-10 px-6 rounded-xl bg-[#4285F4] text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:bg-[#3b78db] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
+                      <button onClick={importAdsToApp} className="h-10 px-6 rounded-xl bg-indigo-600 text-white font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center gap-2">
                         <Download size={14} /> Import to Dashboard
                       </button>
                     </div>
@@ -3888,10 +3888,11 @@ ${reportSections}`;
       </div>
 
       {/* Mobile Nav */}
-      <nav className="md:hidden h-16 bg-[var(--bg-surface)] border-t border-[var(--border-base)] flex items-center justify-around px-2 sticky bottom-0 z-50">
-        <MobileNavItem icon={<LayoutDashboard size={20} />} active={activePage === 'dashboard'} onClick={() => setActivePage('dashboard')} />
-        <MobileNavItem icon={<MessageSquare size={20} />} active={activePage === 'wa'} onClick={() => setActivePage('wa')} />
-        <MobileNavItem icon={<Settings size={20} />} active={activePage === 'setup'} onClick={() => setActivePage('setup')} />
+      <nav className="md:hidden h-16 bg-[var(--bg-surface)] border-t border-[var(--border-base)] flex items-center justify-around px-2 sticky bottom-0 z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <MobileNavItem icon={<LayoutDashboard size={22} />} active={activePage === 'dashboard'} onClick={() => setActivePage('dashboard')} />
+        <MobileNavItem icon={<MessageSquare size={22} />} active={activePage === 'wa'} onClick={() => setActivePage('wa')} />
+        <MobileNavItem icon={<Settings size={22} />} active={activePage === 'setup'} onClick={() => setActivePage('setup')} />
+        <MobileNavItem icon={<UserCircle size={22} />} active={activePage === 'profile'} onClick={() => setActivePage('profile')} />
       </nav>
 
       {/* Modal Add/Edit Platform */}
@@ -3916,7 +3917,7 @@ ${reportSections}`;
                 <div>
                   <label className="label">Brand Color</label>
                   <div className="flex gap-3 mt-2">
-                    {['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#000000', '#FF0050', '#00f2ea'].map(c => (
+                    {['#6366f1', '#EA4335', '#FBBC05', '#34A853', '#000000', '#FF0050', '#00f2ea'].map(c => (
                       <button 
                         key={c} 
                         onClick={() => setNewPlatformColor(c)}
@@ -4276,14 +4277,20 @@ function SidebarItem({ icon, label, active, onClick }: { icon: React.ReactNode, 
     <button 
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all w-full text-left group",
+        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all w-full text-left group",
         active 
-          ? "bg-[#4285F4] text-white shadow-lg shadow-blue-500/20" 
-          : "text-slate-500 hover:bg-slate-50 hover:text-[#4285F4]"
+          ? "bg-sky-600 text-white shadow-lg shadow-sky-500/20" 
+          : "text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-base)]"
       )}
     >
-      <span className={cn("transition-colors", active ? "text-white" : "text-[var(--text-muted)] group-hover:text-[var(--text-base)]")}>{icon}</span>
-      {label}
+      <div className={cn(
+        "transition-colors",
+        active ? "text-white" : "text-[var(--text-muted)] group-hover:text-sky-600"
+      )}>
+        {icon}
+      </div>
+      <span className="font-display">{label}</span>
+      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>}
     </button>
   );
 }
@@ -4293,11 +4300,17 @@ function MobileNavItem({ icon, active, onClick }: { icon: React.ReactNode, activ
     <button 
       onClick={onClick}
       className={cn(
-        "p-3.5 rounded-2xl transition-all",
-        active ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-base)]"
+        "p-3 rounded-xl transition-all relative",
+        active ? "text-sky-600" : "text-[var(--text-muted)]"
       )}
     >
       {icon}
+      {active && (
+        <motion.div 
+          layoutId="mobile-nav-indicator"
+          className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-sky-600"
+        />
+      )}
     </button>
   );
 }
@@ -4307,9 +4320,9 @@ function Pill({ label, active, onClick }: { label: string, active: boolean, onCl
     <button 
       onClick={onClick}
       className={cn(
-        "px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
+        "px-3 md:px-5 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[9px] md:text-[11px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
         active 
-          ? "bg-indigo-600 text-white shadow-md dark:bg-indigo-500" 
+          ? "bg-sky-600 text-white shadow-md" 
           : "text-[var(--text-muted)] hover:text-[var(--text-base)] hover:bg-[var(--bg-surface)]"
       )}
     >
@@ -4319,37 +4332,33 @@ function Pill({ label, active, onClick }: { label: string, active: boolean, onCl
 }
 
 function MetricCard({ label, value, change, trend, platform }: { label: string, value: string, change: string, trend: 'up' | 'down' | 'neu', platform: 'fb' | 'google' | 'tiktok' | 'all' }) {
+  const getPlatformColors = () => {
+    switch(platform) {
+      case 'fb': return 'text-blue-600';
+      case 'google': return 'text-red-600';
+      case 'tiktok': return 'text-pink-600';
+      default: return 'text-sky-600';
+    }
+  };
+
   return (
-    <div className="bento-card group">
-      <div className={cn(
-        "absolute -right-8 -top-8 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500",
-        platform === 'fb' ? "bg-blue-600" : platform === 'google' ? "bg-red-600" : platform === 'tiktok' ? "bg-pink-600" : "bg-indigo-600"
-      )}></div>
-      
-      <div className="flex items-center justify-between mb-6">
-        <span className="text-[10px] font-black text-[var(--text-muted)] tracking-[0.2em] uppercase">{label}</span>
-        <div className={cn(
-          "w-8 h-8 rounded-xl flex items-center justify-center",
-          platform === 'fb' ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : 
-          platform === 'google' ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" : 
-          platform === 'tiktok' ? "bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" : 
-          "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
-        )}>
-          {platform === 'fb' ? <Facebook size={14} /> : 
-           platform === 'google' ? <Globe size={14} /> : 
-           platform === 'tiktok' ? <Zap size={14} /> : <TrendingUp size={14} />}
+    <div className="card group relative overflow-hidden p-4 md:p-6">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <span className="text-[9px] md:text-[11px] font-bold text-[var(--text-muted)] tracking-wider uppercase font-display">{label}</span>
+        <div className={cn("transition-transform group-hover:scale-110 duration-300", getPlatformColors())}>
+          {platform === 'fb' ? <Facebook size={16} md:size={18} /> : 
+           platform === 'google' ? <Globe size={16} md:size={18} /> : 
+           platform === 'tiktok' ? <Zap size={16} md:size={18} /> : <TrendingUp size={16} md:size={18} />}
         </div>
       </div>
       
-      <div className="text-2xl font-black text-[var(--text-base)] tracking-tighter mb-3">{value}</div>
+      <div className="text-xl md:text-3xl font-bold text-[var(--text-base)] tracking-tight mb-2 md:mb-3">{value}</div>
       
       <div className={cn(
-        "text-[10px] font-black flex items-center gap-1.5 px-2 py-1 rounded-lg inline-flex uppercase tracking-wider",
-        trend === 'up' ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400" : trend === 'down' ? "text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400" : "text-[var(--text-muted)] bg-[var(--bg-subtle)]"
+        "text-[9px] md:text-[10px] font-bold flex items-center gap-1 md:gap-1.5 uppercase tracking-widest",
+        trend === 'up' ? "text-emerald-600" : trend === 'down' ? "text-red-600" : "text-[var(--text-muted)]"
       )}>
-        {trend === 'up' && <TrendingUp size={12} />}
-        {trend === 'down' && <TrendingDown size={12} />}
-        {trend === 'neu' && <Minus size={12} />}
+        {trend === 'up' ? <TrendingUp size={10} md:size={12} /> : trend === 'down' ? <TrendingDown size={10} md:size={12} /> : <Minus size={10} md:size={12} />}
         {change}
       </div>
     </div>

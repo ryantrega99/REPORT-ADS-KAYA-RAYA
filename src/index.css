@@ -1,79 +1,71 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-brand-primary: #4285F4; /* Google Blue */
+  --color-brand-primary: #0ea5e9; /* Turkish Blue / Sky Blue */
   --color-brand-secondary: #0f172a;
-  --color-brand-success: #34A853; /* Google Green */
-  --color-brand-warning: #FBBC05; /* Google Yellow */
-  --color-brand-danger: #EA4335; /* Google Red */
+  --color-brand-accent: #2dd4bf; /* Teal/Turquoise */
+  --color-brand-success: #10b981;
+  --color-brand-warning: #f59e0b;
+  --color-brand-danger: #ef4444;
   
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
-  --radius-3xl: 2rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
 }
 
 :root {
-  --bg-base: #f8f9fa; /* Google-style light grey */
+  --bg-base: #f8fafc;
   --bg-surface: #ffffff;
-  --bg-subtle: #f1f3f4;
-  --text-base: #202124;
-  --text-muted: #5f6368;
-  --border-base: #dadce0;
+  --bg-subtle: #f1f5f9;
+  --text-base: #0f172a;
+  --text-muted: #64748b;
+  --border-base: #e2e8f0;
 }
 
 .dark {
-  --bg-base: #202124;
-  --bg-surface: #292a2d;
-  --bg-subtle: #3c4043;
-  --text-base: #e8eaed;
-  --text-muted: #9aa0a6;
-  --border-base: #5f6368;
+  --bg-base: #020617;
+  --bg-surface: #0f172a;
+  --bg-subtle: #1e293b;
+  --text-base: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-base: #1e293b;
 }
 
 @layer base {
   body {
     background-color: var(--bg-base);
     color: var(--text-base);
-    @apply font-sans text-sm antialiased transition-colors duration-300 selection:bg-indigo-500/30 selection:text-indigo-200;
+    @apply font-sans text-sm antialiased transition-colors duration-300 selection:bg-sky-500/30 selection:text-sky-900;
   }
   
   h1, h2, h3, h4 {
-    @apply tracking-tight font-bold;
+    @apply font-display tracking-tight font-bold;
   }
+
+  /* Responsive Typography */
+  h1 { @apply text-4xl md:text-5xl lg:text-6xl; }
+  h2 { @apply text-2xl md:text-3xl lg:text-4xl; }
+  h3 { @apply text-xl md:text-2xl; }
 }
 
 @layer components {
   .card {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-base);
-    backdrop-filter: blur(12px);
-    @apply rounded-2xl p-6 shadow-xl shadow-indigo-500/5 hover:shadow-indigo-500/10 transition-all duration-300;
-  }
-  .dark .card {
-    box-shadow: 0 4px 20px -2px rgba(0,0,0,0.5);
-  }
-  .dark .card:hover {
-    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.7);
-    border-color: #333333;
+    @apply rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300;
   }
   
   .bento-card {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-base);
-    backdrop-filter: blur(12px);
-    @apply rounded-3xl p-6 shadow-xl shadow-indigo-500/5 hover:shadow-indigo-500/10 transition-all duration-300 relative overflow-hidden;
-  }
-  .dark .bento-card {
-    box-shadow: 0 4px 20px -2px rgba(0,0,0,0.5);
-  }
-  .dark .bento-card:hover {
-    border-color: #333333;
+    @apply rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden;
   }
 
   .btn {
@@ -81,15 +73,15 @@
   }
   
   .btn-primary {
-    @apply bg-[#4285F4] text-white hover:bg-[#3b78db] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 dark:bg-[#4285F4] dark:hover:bg-[#5a95f5] dark:shadow-blue-900/20;
+    @apply bg-sky-600 text-white hover:bg-sky-700 shadow-lg shadow-sky-500/20 hover:shadow-sky-500/30;
   }
   
+  .btn-accent {
+    @apply bg-teal-500 text-white hover:bg-teal-600 shadow-lg shadow-teal-500/20;
+  }
+
   .btn-dark {
     @apply bg-slate-900 text-white hover:bg-slate-800 shadow-sm dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200;
-  }
-  
-  .btn-wa {
-    @apply bg-[#25D366] text-white hover:bg-[#128C7E] shadow-sm;
   }
   
   .btn-outline {
@@ -101,19 +93,11 @@
     background-color: var(--bg-subtle);
   }
   
-  .btn-ghost {
-    color: var(--text-muted);
-  }
-  .btn-ghost:hover {
-    background-color: var(--bg-subtle);
-    color: var(--text-base);
-  }
-
   .input {
-    background-color: var(--bg-base);
+    background-color: var(--bg-surface);
     border: 1px solid var(--border-base);
     color: var(--text-base);
-    @apply w-full rounded-xl px-4 py-2.5 outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all;
+    @apply w-full rounded-xl px-4 py-2.5 outline-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all;
   }
   .input::placeholder {
     color: var(--text-muted);
@@ -125,7 +109,7 @@
   }
   
   .badge {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm;
   }
 }
 
