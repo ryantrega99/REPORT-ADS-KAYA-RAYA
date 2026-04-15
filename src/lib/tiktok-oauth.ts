@@ -17,6 +17,8 @@ const CONFIG = {
   },
 };
 
+console.log('[TikTok OAuth] Config initialized with App ID:', CONFIG.tiktok.appId, 'Secret length:', CONFIG.tiktok.appSecret?.length || 0);
+
 // Initialize Firebase lazily
 let _db: any;
 function getDb() {
@@ -169,6 +171,7 @@ export async function handleCallback(req: any, res: any) {
     });
 
     const tokenData = await tokenRes.json();
+    console.log('[TikTok OAuth] Token exchange response code:', tokenData.code, 'Message:', tokenData.message);
 
     if (tokenData.code !== 0) {
       throw new Error(tokenData.message || 'Gagal menukar kode dengan token');
