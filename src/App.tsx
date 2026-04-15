@@ -40,7 +40,8 @@ import {
   Sun,
   Zap,
   Save,
-  ArrowRight
+  ArrowRight,
+  Menu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Campaign, Creative, Platform, PRODUCTS } from './types';
@@ -347,6 +348,7 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [activePage, setActivePage] = useState<string>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [dataTab, setDataTab] = useState<'ads' | 'creatives'>('ads');
   const [userSearch, setUserSearch] = useState('');
   const [loginEmail, setLoginEmail] = useState('');
@@ -2397,6 +2399,12 @@ ${reportSections}`;
       {/* Topbar */}
       <header className="h-16 md:h-18 bg-[var(--bg-surface)] border-b border-[var(--border-base)] px-4 md:px-8 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2 md:gap-3">
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="md:hidden p-2 text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] rounded-xl transition-all"
+          >
+            <Menu size={20} />
+          </button>
           <Logo className="w-8 h-8 md:w-9 md:h-9" />
           <div className="text-lg md:text-2xl font-bold tracking-tighter text-[var(--text-base)]">
             KayaRaya<span className="text-sky-600"> Dashboard</span>
@@ -3973,9 +3981,94 @@ ${reportSections}`;
       <nav className="md:hidden h-16 bg-[var(--bg-surface)] border-t border-[var(--border-base)] flex items-center justify-around px-2 sticky bottom-0 z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
         <MobileNavItem icon={<LayoutDashboard size={22} />} active={activePage === 'dashboard'} onClick={() => setActivePage('dashboard')} />
         <MobileNavItem icon={<MessageSquare size={22} />} active={activePage === 'wa'} onClick={() => setActivePage('wa')} />
+        
+        {currentUser.role === 'admin' ? (
+          <MobileNavItem icon={<Users size={22} />} active={activePage === 'admin'} onClick={() => setActivePage('admin')} />
+        ) : (
+          <MobileNavItem icon={<Database size={22} />} active={activePage === 'data'} onClick={() => setActivePage('data')} />
+        )}
+        
         <MobileNavItem icon={<Settings size={22} />} active={activePage === 'setup'} onClick={() => setActivePage('setup')} />
         <MobileNavItem icon={<UserCircle size={22} />} active={activePage === 'profile'} onClick={() => setActivePage('profile')} />
       </nav>
+
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-[100] md:hidden">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+              onClick={() => setIsMobileMenuOpen(false)} 
+            />
+            <motion.div 
+              initial={{ x: '-100%' }} 
+              animate={{ x: 0 }} 
+              exit={{ x: '-100%' }} 
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute top-0 left-0 bottom-0 w-[280px] bg-[var(--bg-surface)] shadow-2xl flex flex-col p-6"
+            >
+              <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-2">
+                  <Logo className="w-8 h-8" />
+                  <div className="text-xl font-bold tracking-tighter text-[var(--text-base)]">
+                    KayaRaya
+                  </div>
+                </div>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] rounded-xl">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-8 no-scrollbar">
+                <div>
+                  <div className="text-[10px] font-black tracking-[0.2em] uppercase text-[var(--text-muted)] px-4 mb-4">Main Menu</div>
+                  <div className="space-y-1">
+                    <SidebarItem icon={<LayoutDashboard size={18} />} label="Dashboard" active={activePage === 'dashboard'} onClick={() => { setActivePage('dashboard'); setIsMobileMenuOpen(false); }} />
+                    <SidebarItem icon={<MessageSquare size={18} />} label="Kirim Laporan WA" active={activePage === 'wa'} onClick={() => { setActivePage('wa'); setIsMobileMenuOpen(false); }} />
+                    {currentUser.role === 'admin' && (
+                      <SidebarItem icon={<Users size={18} />} label="Command Center" active={activePage === 'admin'} onClick={() => { setActivePage('admin'); setIsMobileMenuOpen(false); }} />
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] font-black tracking-[0.2em] uppercase text-[var(--text-muted)] px-4 mb-4">Data Fetching</div>
+                  <div className="space-y-1">
+                    <SidebarItem icon={<Database size={18} />} label="Tarik Data Ads" active={activePage === 'data'} onClick={() => { setActivePage('data'); setIsMobileMenuOpen(false); }} />
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="text-[10px] font-black tracking-[0.2em] uppercase text-[var(--text-muted)] px-4 mb-4">Settings</div>
+                  <div className="space-y-1">
+                    {currentUser.role === 'admin' && (
+                      <SidebarItem icon={<History size={18} />} label="Activity Logs" active={activePage === 'logs'} onClick={() => { setActivePage('logs'); setIsMobileMenuOpen(false); }} />
+                    )}
+                    <SidebarItem icon={<RefreshCw size={18} />} label="Automation" active={activePage === 'schedule'} onClick={() => { setActivePage('schedule'); setIsMobileMenuOpen(false); }} />
+                    <SidebarItem icon={<Database size={18} />} label="API Connections" active={activePage === 'setup'} onClick={() => { setActivePage('setup'); setIsMobileMenuOpen(false); }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-auto pt-6 border-t border-[var(--border-base)]">
+                <button 
+                  onClick={() => { setIsDarkMode(!isDarkMode); setIsMobileMenuOpen(false); }}
+                  className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all w-full text-left text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-base)]"
+                >
+                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                  {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                </button>
+                <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all w-full text-left text-red-500 hover:bg-red-50">
+                  <LogOut size={18} /> Sign Out
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Add/Edit Platform */}
       <AnimatePresence>
