@@ -6,6 +6,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import cron from 'node-cron';
+import { connectPageHTML, handleCallback, fetchTikTokAPI, TikTokTokenError } from "./src/lib/tiktok-oauth";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -594,7 +595,6 @@ app.post("/api/platforms/delete", async (req, res) => {
     try {
       const { advertiserId, token, startDate, endDate, datePreset } = req.body;
       
-      // Map date presets to TikTok format if needed, but TikTok usually takes start/end date
       let start = startDate;
       let end = endDate;
 
@@ -621,8 +621,7 @@ app.post("/api/platforms/delete", async (req, res) => {
         }
       }
 
-      const params = new URLSearchParams({
-        advertiser_id: advertiserId,
+      const params = {
         report_type: 'BASIC',
         data_level: 'AUCTION_CAMPAIGN',
         dimensions: JSON.stringify(['stat_time_day']),
@@ -630,21 +629,17 @@ app.post("/api/platforms/delete", async (req, res) => {
         start_date: start,
         end_date: end,
         page_size: '100'
-      });
+      };
 
-      const url = `https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/?` + params.toString();
-      const ttRes = await fetch(url, {
-        headers: {
-          'Access-Token': token
+      try {
+        const data = await fetchTikTokAPI(advertiserId, '/report/integrated/get/', params);
+        res.json({ ok: true, data: data.list });
+      } catch (err) {
+        if (err instanceof TikTokTokenError) {
+          return res.status(401).json({ ok: false, error: err.message, reconnect: true });
         }
-      });
-      const result = await ttRes.json();
-      
-      if (result.code !== 0) {
-        return res.status(400).json({ ok: false, error: result.message || "TikTok API Error" });
+        throw err;
       }
-      
-      res.json({ ok: true, data: result.data.list });
     } catch (err: any) {
       res.status(500).json({ ok: false, error: err.message });
     }
@@ -955,6 +950,14 @@ app.post("/api/platforms/delete", async (req, res) => {
 const TIKTOK_APP_ID = process.env.TIKTOK_APP_ID || "7628504693093711873";
 const TIKTOK_SECRET = process.env.TIKTOK_SECRET || ""; // isi di .env
 
+app.get("/tiktok/connect", (req, res) => {
+  res.send(connectPageHTML({
+    advertiserId: (req.query.advertiser_id as string) || '',
+    error:        (req.query.error as string)        || '',
+    connected:    req.query.connected === 'true',
+  }));
+});
+
 app.get("/api/tiktok/auth", (req, res) => {
   const host = req.get('host');
   const protocol = req.get('x-forwarded-proto') || req.protocol;
@@ -964,61 +967,7 @@ app.get("/api/tiktok/auth", (req, res) => {
   res.json({ url: authUrl });
 });
 
-app.get("/api/tiktok/callback", async (req, res) => {
-  try {
-    const { auth_code, state } = req.query;
-
-    if (!auth_code) {
-      return res.status(400).send("Auth code tidak ditemukan");
-    }
-
-    // Tukar auth_code jadi access token
-    const tokenRes = await fetch("https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        app_id: TIKTOK_APP_ID,
-        secret: TIKTOK_SECRET,
-        auth_code: auth_code,
-        grant_type: "authorization_code"
-      })
-    });
-
-    const data = await tokenRes.json();
-
-    if (data.code !== 0) {
-      return res.status(400).json({ ok: false, error: data.message });
-    }
-
-    const { access_token, advertiser_ids } = data.data;
-
-    // Send success message to parent window and close popup
-    res.send(`
-      <html>
-        <body>
-          <script>
-            if (window.opener) {
-              window.opener.postMessage({ 
-                type: 'TIKTOK_OAUTH_SUCCESS', 
-                payload: { 
-                  access_token: '${access_token}', 
-                  advertiser_ids: '${advertiser_ids.join(",")}' 
-                } 
-              }, '*');
-              window.close();
-            } else {
-              window.location.href = '/?tiktok_token=${access_token}&advertiser_ids=${advertiser_ids.join(",")}';
-            }
-          </script>
-          <p>Authentication successful. This window should close automatically.</p>
-        </body>
-      </html>
-    `);
-
-  } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
+app.get("/api/tiktok/callback", handleCallback);
 
 // Vite middleware for development
 if (process.env.NODE_ENV !== "production") {
@@ -1199,12 +1148,11 @@ async function runAutomationForUser(user: any) {
     }
 
     // 3. Fetch TikTok Ads
-    if (user.ttToken && user.ttAdvertisers && user.ttAdvertisers.length > 0) {
+    if (user.ttAdvertisers && user.ttAdvertisers.length > 0) {
       for (const advertiserId of user.ttAdvertisers) {
         if (!advertiserId.trim()) continue;
         try {
-          const params = new URLSearchParams({
-            advertiser_id: advertiserId.trim(),
+          const params = {
             report_type: 'BASIC',
             data_level: 'AUCTION_CAMPAIGN',
             dimensions: JSON.stringify(['stat_time_day', 'campaign_name']),
@@ -1212,16 +1160,12 @@ async function runAutomationForUser(user: any) {
             start_date: yesterdayStr,
             end_date: todayStr,
             page_size: '100'
-          });
+          };
 
-          const url = `https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/?` + params.toString();
-          const res = await fetch(url, {
-            headers: { 'Access-Token': user.ttToken }
-          });
-          const result = await res.json();
+          const data = await fetchTikTokAPI(advertiserId.trim(), '/report/integrated/get/', params);
           
-          if (result.code === 0 && result.data && result.data.list) {
-            result.data.list.forEach((c: any) => {
+          if (data && data.list) {
+            data.list.forEach((c: any) => {
               const spend = parseFloat(c.metrics.spend || '0');
               if (spend <= 0) return;
 
