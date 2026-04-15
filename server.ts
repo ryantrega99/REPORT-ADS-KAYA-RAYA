@@ -956,9 +956,12 @@ const TIKTOK_APP_ID = process.env.TIKTOK_APP_ID || "7628504693093711873";
 const TIKTOK_SECRET = process.env.TIKTOK_SECRET || ""; // isi di .env
 
 app.get("/api/tiktok/auth", (req, res) => {
-  const redirectUri = encodeURIComponent("https://report-ads-kaya-raya.vercel.app/api/tiktok/callback");
+  const host = req.get('host');
+  const protocol = req.get('x-forwarded-proto') || req.protocol;
+  const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+  const redirectUri = encodeURIComponent(`${baseUrl}/api/tiktok/callback`);
   const authUrl = `https://business-api.tiktok.com/portal/auth?app_id=${TIKTOK_APP_ID}&state=mrbob&redirect_uri=${redirectUri}`;
-  res.redirect(authUrl);
+  res.json({ url: authUrl });
 });
 
 app.get("/api/tiktok/callback", async (req, res) => {
@@ -989,8 +992,28 @@ app.get("/api/tiktok/callback", async (req, res) => {
 
     const { access_token, advertiser_ids } = data.data;
 
-    // Redirect ke frontend dengan token
-    res.redirect(`/?tiktok_token=${access_token}&advertiser_ids=${advertiser_ids.join(",")}`);
+    // Send success message to parent window and close popup
+    res.send(`
+      <html>
+        <body>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ 
+                type: 'TIKTOK_OAUTH_SUCCESS', 
+                payload: { 
+                  access_token: '${access_token}', 
+                  advertiser_ids: '${advertiser_ids.join(",")}' 
+                } 
+              }, '*');
+              window.close();
+            } else {
+              window.location.href = '/?tiktok_token=${access_token}&advertiser_ids=${advertiser_ids.join(",")}';
+            }
+          </script>
+          <p>Authentication successful. This window should close automatically.</p>
+        </body>
+      </html>
+    `);
 
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err.message });
