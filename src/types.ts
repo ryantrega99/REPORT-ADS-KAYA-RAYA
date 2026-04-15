@@ -46,6 +46,15 @@ export interface User {
   assignedProducts?: string[];
   assignedFBAccounts?: string[];
   assignedGAdsAccounts?: string[];
+  fbToken?: string;
+  fbAdvertisers?: string[];
+  gadsRefreshToken?: string;
+  gadsAdvertisers?: string[];
+  ttToken?: string;
+  ttAdvertisers?: string[];
+  waToken?: string;
+  waTarget?: string;
+  automationEnabled?: boolean;
 }
 
 export interface Campaign {

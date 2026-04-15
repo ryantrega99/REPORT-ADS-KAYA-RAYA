@@ -425,6 +425,19 @@ export default function App() {
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.fbToken) setFbToken(currentUser.fbToken);
+      if (currentUser.gadsRefreshToken) setGadsRefreshToken(currentUser.gadsRefreshToken);
+      if (currentUser.ttToken) setTtToken(currentUser.ttToken);
+      if (currentUser.waToken) setWaToken(currentUser.waToken);
+      if (currentUser.waTarget) setWaTarget(currentUser.waTarget);
+      if (currentUser.fbAdvertisers && currentUser.fbAdvertisers.length > 0) setFbAdvertisers(currentUser.fbAdvertisers);
+      if (currentUser.gadsAdvertisers && currentUser.gadsAdvertisers.length > 0) setGadsAdvertisers(currentUser.gadsAdvertisers);
+      if (currentUser.ttAdvertisers && currentUser.ttAdvertisers.length > 0) setTtAdvertisers(currentUser.ttAdvertisers);
+    }
+  }, [currentUser]);
+
   // Fetch initial data
   useEffect(() => {
     // Initial data is now handled by Firebase onSnapshot listeners
@@ -438,11 +451,28 @@ export default function App() {
     if (ttTokenParam) {
       setTtToken(ttTokenParam);
       localStorage.setItem('kayaraya_tt_token', ttTokenParam);
+      let ids: string[] = [];
       if (ttAdvertisersParam) {
-        const ids = ttAdvertisersParam.split(',');
+        ids = ttAdvertisersParam.split(',');
         setTtAdvertisers(ids);
         localStorage.setItem('kayaraya_tt_advertisers', JSON.stringify(ids));
       }
+      
+      // Also save to server if user is logged in
+      if (currentUser) {
+        fetch('/api/users/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: currentUser.id,
+            ttToken: ttTokenParam,
+            ttAdvertisers: ids
+          })
+        }).then(r => r.json()).then(res => {
+          if (res.ok) console.log('TikTok token synced to server');
+        }).catch(e => console.error('Failed to sync TikTok token to server', e));
+      }
+
       addToast('TikTok Ads Connected Successfully!', 'success');
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -1550,8 +1580,10 @@ export default function App() {
           id: currentUser.id,
           fbToken,
           gadsRefreshToken,
+          ttToken,
           fbAdvertisers,
           gadsAdvertisers,
+          ttAdvertisers,
           waToken,
           waTarget,
           sheetIds,
@@ -1779,7 +1811,8 @@ export default function App() {
 
           if (!result.ok) {
             console.error(`TikTok API Error (${id}):`, result.error);
-            addToast(`Gagal ambil data TikTok ${id}: ${result.error}`, 'warn');
+            const isTokenError = result.error?.toLowerCase().includes('access token') || result.error?.toLowerCase().includes('revoked');
+            addToast(`Gagal ambil data TikTok ${id}: ${result.error}${isTokenError ? '. Silakan hubungkan ulang TikTok Ads Anda.' : ''}`, 'warn');
             continue;
           }
           
