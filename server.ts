@@ -6,10 +6,18 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import cron from 'node-cron';
-import { connectPageHTML, handleCallback, fetchTikTokAPI, TikTokTokenError } from "./src/lib/tiktok-oauth.ts";
+import { connectPageHTML, handleCallback, fetchTikTokAPI, TikTokTokenError } from "./src/lib/tiktok-oauth";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
 
 const firebaseConfig = {
   "apiKey": "AIzaSyARd4fFDkeErs-lT71HRlLCWkdvN3RkRQg",
@@ -234,17 +242,7 @@ app.get("/api/health", (req, res) => {
 
 app.post("/api/auth/login", async (req, res) => {
   try {
-    const isAuth = await ensureAuth();
     let { email, password } = req.body;
-    console.log(`Login attempt for: ${email}. Server Auth: ${auth?.currentUser?.email || 'None'}`);
-    
-    if (!isAuth) {
-      return res.status(500).json({ 
-        ok: false, 
-        error: `Server Authentication Failed: ${authError}. Pastikan user 'lkbimrbob@gmail.com' sudah dibuat di Firebase Console > Authentication.` 
-      });
-    }
-    
     if (!email || !password) {
       return res.status(400).json({ ok: false, error: "Email dan password wajib diisi" });
     }
@@ -255,27 +253,38 @@ app.post("/api/auth/login", async (req, res) => {
     // Hardcoded fail-safe for super admin to ensure access
     if (cleanEmail === "lkbimrbob@gmail.com" && cleanPass === "kayaraya123") {
       console.log("Super Admin hardcoded login successful.");
-      // Still try to find in Firestore to get full profile
-      const usersSnap = await getDocs(query(collection(db, 'users'), where("email", "==", cleanEmail)));
-      let admin = usersSnap.docs.length > 0 ? usersSnap.docs[0].data() : null;
       
-      if (!admin) {
-        admin = {
-          id: "super-admin",
-          name: "Super Admin",
-          email: cleanEmail,
-          role: "admin",
-          color: "#4f46e5",
-          initials: "SA",
-          status: "Aktif",
-          createdAt: new Date().toISOString(),
-          assignedProducts: [],
-          assignedFBAccounts: [],
-          assignedGAdsAccounts: []
-        };
+      // Try to initialize Firebase in background if not ready
+      if (!isInitialized) {
+        performInit().catch(e => console.error("Background init failed:", e));
       }
-      const { pass, ...userWithoutPass } = admin;
-      return res.json({ ok: true, user: userWithoutPass });
+
+      // Return a basic profile even if Firestore is slow/failing
+      const admin = {
+        id: "super-admin",
+        name: "Super Admin",
+        email: cleanEmail,
+        role: "admin" as const,
+        color: "#4f46e5",
+        initials: "SA",
+        status: "Aktif" as const,
+        createdAt: new Date().toISOString(),
+        assignedProducts: [],
+        assignedFBAccounts: [],
+        assignedGAdsAccounts: []
+      };
+      
+      return res.json({ ok: true, user: admin });
+    }
+
+    const isAuth = await ensureAuth();
+    console.log(`Login attempt for: ${email}. Server Auth: ${auth?.currentUser?.email || 'None'}`);
+    
+    if (!isAuth) {
+      return res.status(500).json({ 
+        ok: false, 
+        error: `Server Authentication Failed: ${authError}. Pastikan user 'lkbimrbob@gmail.com' sudah dibuat di Firebase Console > Authentication.` 
+      });
     }
 
     console.log(`Checking Firestore for user: ${cleanEmail}`);
@@ -344,11 +353,17 @@ app.get("/api/users", async (req, res) => {
 });
 
 async function ensureAuth() {
+  if (!auth) {
+    console.log("Auth not initialized, running initFirebase...");
+    await initFirebase();
+  }
+  
   if (!auth?.currentUser) {
     console.log("Server not authenticated, attempting sign-in...");
     const adminEmail = "lkbimrbob@gmail.com";
     const adminPass = "kayaraya123";
     try {
+      if (!auth) throw new Error("Firebase Auth instance is still undefined after initialization");
       await signInWithEmailAndPassword(auth, adminEmail, adminPass);
       console.log("Server signed in successfully.");
       authError = null;

@@ -11,9 +11,9 @@ const CONFIG = {
     redirectUri: process.env.APP_URL ? `${process.env.APP_URL}/api/tiktok/callback` : '',
   },
   firebase: {
-    apiKey:      process.env.FIREBASE_API_KEY,
-    authDomain:  process.env.FIREBASE_AUTH_DOMAIN,
-    projectId:   process.env.FIREBASE_PROJECT_ID,
+    apiKey:      process.env.FIREBASE_API_KEY || 'AIzaSyARd4fFDkeErs-lT71HRlLCWkdvN3RkRQg',
+    authDomain:  process.env.FIREBASE_AUTH_DOMAIN || 'ads-mr-bob-report.firebaseapp.com',
+    projectId:   process.env.FIREBASE_PROJECT_ID || 'ads-mr-bob-report',
   },
 };
 
