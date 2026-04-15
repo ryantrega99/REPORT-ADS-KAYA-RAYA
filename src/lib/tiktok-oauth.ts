@@ -230,11 +230,16 @@ export async function getToken(advertiserId: string) {
 export async function revokeToken(advertiserId: string) {
   const db = getDb();
   if (!db) return;
-  await updateDoc(doc(db, 'tiktok_tokens', String(advertiserId)), {
-    status:     'revoked',
-    revoked_at: serverTimestamp(),
-  });
-  console.warn('[TikTok Token] Revoked:', advertiserId);
+  try {
+    // Use setDoc with merge instead of updateDoc to avoid NOT_FOUND error
+    await setDoc(doc(db, 'tiktok_tokens', String(advertiserId)), {
+      status:     'revoked',
+      revoked_at: serverTimestamp(),
+    }, { merge: true });
+    console.warn('[TikTok Token] Revoked:', advertiserId);
+  } catch (err: any) {
+    console.error('[TikTok Token] Revoke failed:', advertiserId, err.message);
+  }
 }
 
 export async function fetchTikTokAPI(advertiserId: string, endpoint: string, params: any = {}, method = 'GET', providedToken?: string) {
