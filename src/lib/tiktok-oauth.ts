@@ -39,7 +39,7 @@ function getDb() {
 // ============================================================
 //  1. HALAMAN UI  —  GET /tiktok/connect
 // ============================================================
-export function connectPageHTML({ advertiserId = '', error = '', connected = false } = {}) {
+export function connectPageHTML({ advertiserId = '', error = '', connected = false, accessToken = '' } = {}) {
   const redirectUri = process.env.APP_URL 
     ? `${process.env.APP_URL}/api/tiktok/callback` 
     : '';
@@ -133,6 +133,7 @@ ${connected ? `
     window.opener.postMessage({ 
       type: 'TIKTOK_OAUTH_SUCCESS', 
       payload: { 
+        access_token: '${accessToken}',
         advertiser_ids: '${advertiserId}' 
       } 
     }, '*');
@@ -201,8 +202,11 @@ export async function handleCallback(req: any, res: any) {
 
     console.log('[TikTok OAuth] Token disimpan untuk:', advertiser_ids);
 
-    const firstId = advertiser_ids[0] || '';
-    return res.send(connectPageHTML({ connected: true, advertiserId: advertiser_ids.join(",") }));
+    return res.send(connectPageHTML({ 
+      connected: true, 
+      advertiserId: advertiser_ids.join(","),
+      accessToken: access_token
+    }));
 
   } catch (err: any) {
     console.error('[TikTok OAuth] Exception:', err.message);
