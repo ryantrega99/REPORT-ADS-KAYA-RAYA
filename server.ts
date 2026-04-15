@@ -6,7 +6,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import cron from 'node-cron';
-import { connectPageHTML, handleCallback, fetchTikTokAPI, TikTokTokenError } from "./src/lib/tiktok-oauth";
+import { connectPageHTML, handleCallback, fetchTikTokAPI, TikTokTokenError } from "./src/lib/tiktok-oauth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,50 +47,30 @@ let memoryData: any = {};
 
 async function initFirebase() {
   try {
-    console.log("Initializing Firebase with inlined config...");
+    if (isInitialized && auth) return true;
+    console.log("Initializing Firebase...");
     const firebaseApp = initializeApp(firebaseConfig);
     db = getFirestore(firebaseApp);
     auth = getAuth(firebaseApp);
 
-    console.log("Firebase initialized successfully.");
+    console.log("Firebase initialized.");
 
-    // Sign in server to allow Firestore writes
+    // Sign in server in background to avoid blocking startup
     const adminEmail = "lkbimrbob@gmail.com";
     const adminPass = "kayaraya123";
 
-    try {
-      await signInWithEmailAndPassword(auth, adminEmail, adminPass);
-      console.log("Server signed in to Firebase successfully.");
-      authError = null;
+    signInWithEmailAndPassword(auth, adminEmail, adminPass)
+      .then(() => {
+        console.log("Server signed in to Firebase successfully.");
+        authError = null;
+        // Trigger data load after sign-in
+        ensureDataDir().catch(e => console.error("Background data load failed:", e));
+      })
+      .catch((err: any) => {
+        authError = err.message;
+        console.error("Server failed to sign in to Firebase:", err.message);
+      });
 
-      // Load platforms AFTER successful sign-in to avoid permission errors
-      try {
-        const platformsSnap = await getDocs(collection(db, 'platforms'));
-        memoryPlatforms = platformsSnap.docs.map(doc => doc.data());
-        console.log(`Loaded ${memoryPlatforms.length} platforms from Firestore.`);
-        
-        if (memoryPlatforms.length === 0) {
-          const defaultPlatforms = [
-            { id: 'fb', name: 'Facebook Ads', color: '#4285F4', icon: 'Facebook', status: 'active' },
-            { id: 'google', name: 'Google Ads', color: '#EA4335', icon: 'Search', status: 'active' }
-          ];
-          for (const p of defaultPlatforms) {
-            await setDoc(doc(db, 'platforms', p.id), p);
-            memoryPlatforms.push(p);
-          }
-          console.log("Default platforms initialized.");
-        }
-      } catch (err) {
-        console.error("Error loading platforms from Firestore:", err);
-      }
-    } catch (err: any) {
-      authError = err.message;
-      console.error("CRITICAL: Server failed to sign in to Firebase. Firestore operations will likely fail.", err);
-      console.error("Reason:", err.message);
-      if (err.code === 'auth/operation-not-allowed') {
-        console.error("ACTION REQUIRED: Enable Email/Password Authentication in the Firebase Console.");
-      }
-    }
     return true;
   } catch (err) {
     console.error("Failed to initialize Firebase:", err);
@@ -194,7 +174,7 @@ async function performInit() {
   
   initPromise = (async () => {
     await initFirebase();
-    await ensureDataDir();
+    // ensureDataDir is now called inside initFirebase's sign-in success callback
     isInitialized = true;
     initPromise = null;
   })();
@@ -205,7 +185,14 @@ async function performInit() {
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
-// Middleware to ensure initialization
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    initialized: isInitialized, 
+    auth: !!auth?.currentUser,
+    error: authError 
+  });
+});
 app.use(async (req, res, next) => {
   try {
     if (!isInitialized) {
