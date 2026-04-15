@@ -237,8 +237,8 @@ export async function revokeToken(advertiserId: string) {
   console.warn('[TikTok Token] Revoked:', advertiserId);
 }
 
-export async function fetchTikTokAPI(advertiserId: string, endpoint: string, params: any = {}, method = 'GET') {
-  const token = await getToken(advertiserId);
+export async function fetchTikTokAPI(advertiserId: string, endpoint: string, params: any = {}, method = 'GET', providedToken?: string) {
+  const token = providedToken || await getToken(advertiserId);
 
   const BASE = 'https://business-api.tiktok.com/open_api/v1.3';
   let url = `${BASE}${endpoint}`;

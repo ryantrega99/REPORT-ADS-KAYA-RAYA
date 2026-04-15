@@ -6,7 +6,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import cron from 'node-cron';
-import { connectPageHTML, handleCallback, fetchTikTokAPI, TikTokTokenError } from "./src/lib/tiktok-oauth.js";
+import { fetchTikTokAPI, TikTokTokenError } from "./src/lib/tiktok-oauth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -634,7 +634,7 @@ app.post("/api/platforms/delete", async (req, res) => {
       };
 
       try {
-        const data = await fetchTikTokAPI(advertiserId, '/report/integrated/get/', params);
+        const data = await fetchTikTokAPI(advertiserId, '/report/integrated/get/', params, 'GET', token);
         res.json({ ok: true, data: data.list });
       } catch (err) {
         if (err instanceof TikTokTokenError) {
@@ -952,25 +952,6 @@ app.post("/api/platforms/delete", async (req, res) => {
 const TIKTOK_APP_ID = process.env.TIKTOK_APP_ID || "7628504693093711873";
 const TIKTOK_SECRET = process.env.TIKTOK_SECRET || ""; // isi di .env
 
-app.get("/tiktok/connect", (req, res) => {
-  res.send(connectPageHTML({
-    advertiserId: (req.query.advertiser_id as string) || '',
-    error:        (req.query.error as string)        || '',
-    connected:    req.query.connected === 'true',
-  }));
-});
-
-app.get("/api/tiktok/auth", (req, res) => {
-  const host = req.get('host');
-  const protocol = req.get('x-forwarded-proto') || req.protocol;
-  const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
-  const redirectUri = encodeURIComponent(`${baseUrl}/api/tiktok/callback`);
-  const authUrl = `https://business-api.tiktok.com/portal/auth?app_id=${TIKTOK_APP_ID}&state=mrbob&redirect_uri=${redirectUri}`;
-  res.json({ url: authUrl });
-});
-
-app.get("/api/tiktok/callback", handleCallback);
-
 // Vite middleware for development
 if (process.env.NODE_ENV !== "production") {
   const { createServer: createViteServer } = await import("vite");
@@ -1164,7 +1145,7 @@ async function runAutomationForUser(user: any) {
             page_size: '100'
           };
 
-          const data = await fetchTikTokAPI(advertiserId.trim(), '/report/integrated/get/', params);
+          const data = await fetchTikTokAPI(advertiserId.trim(), '/report/integrated/get/', params, 'GET', user.ttToken);
           
           if (data && data.list) {
             data.list.forEach((c: any) => {

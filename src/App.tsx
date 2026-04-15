@@ -444,42 +444,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Handle TikTok OAuth redirect
-    const params = new URLSearchParams(window.location.search);
-    const ttTokenParam = params.get('tiktok_token');
-    const ttAdvertisersParam = params.get('advertiser_ids');
-    if (ttTokenParam) {
-      setTtToken(ttTokenParam);
-      localStorage.setItem('kayaraya_tt_token', ttTokenParam);
-      let ids: string[] = [];
-      if (ttAdvertisersParam) {
-        ids = ttAdvertisersParam.split(',');
-        setTtAdvertisers(ids);
-        localStorage.setItem('kayaraya_tt_advertisers', JSON.stringify(ids));
-      }
-      
-      // Also save to server if user is logged in
-      if (currentUser) {
-        fetch('/api/users/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: currentUser.id,
-            ttToken: ttTokenParam,
-            ttAdvertisers: ids
-          })
-        }).then(r => r.json()).then(res => {
-          if (res.ok) console.log('TikTok token synced to server');
-        }).catch(e => console.error('Failed to sync TikTok token to server', e));
-      }
-
-      addToast('TikTok Ads Connected Successfully!', 'success');
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
-
-  useEffect(() => {
     // Handle OAuth popup redirect
     if (window.location.hash.includes('access_token=')) {
       const params = new URLSearchParams(window.location.hash.substring(1));
@@ -521,32 +485,6 @@ export default function App() {
           pendingActionRef.current = null;
           fn();
         }
-      }
-
-      if (event.data?.type === 'TIKTOK_OAUTH_SUCCESS') {
-        const { access_token, advertiser_ids } = event.data.payload;
-        setTtToken(access_token);
-        localStorage.setItem('kayaraya_tt_token', access_token);
-        
-        const ids = advertiser_ids.split(',');
-        setTtAdvertisers(ids);
-        localStorage.setItem('kayaraya_tt_advertisers', JSON.stringify(ids));
-
-        if (currentUser) {
-          fetch('/api/users/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: currentUser.id,
-              ttToken: access_token,
-              ttAdvertisers: ids
-            })
-          }).then(r => r.json()).then(res => {
-            if (res.ok) console.log('TikTok token synced to server');
-          }).catch(e => console.error('Failed to sync TikTok token to server', e));
-        }
-
-        addToast('TikTok Ads Connected Successfully!', 'success');
       }
     };
 
@@ -1597,17 +1535,7 @@ export default function App() {
   }, [currentUser, fbToken, fbAdvertisers, gadsAdvertisers, googleAccessToken, sheetIds]);
 
   const handleTikTokAuth = async () => {
-    try {
-      const res = await fetch('/api/tiktok/auth');
-      const result = await res.json();
-      if (result.url) {
-        window.open(result.url, 'tiktok_oauth', 'width=600,height=800');
-      } else {
-        addToast('Gagal mendapatkan URL autentikasi TikTok', 'err');
-      }
-    } catch (err) {
-      addToast('Gagal menghubungkan TikTok Ads', 'err');
-    }
+    addToast('TikTok OAuth connection is disabled. Please enter token manually.', 'info');
   };
 
   const saveAutomationConfig = async () => {
@@ -3901,12 +3829,6 @@ ${reportSections}`;
                         ))}
                       </div>
                       <button onClick={saveAutomationConfig} className="btn btn-primary w-full h-11 mt-4 bg-pink-600 hover:bg-pink-700 border-none">Save TikTok Config</button>
-                      <button 
-                        onClick={handleTikTokAuth} 
-                        className="btn btn-outline w-full h-11 mt-2 border-pink-200 text-pink-600 hover:bg-pink-50"
-                      >
-                        <Zap size={16} className="mr-2" /> Connect via TikTok OAuth
-                      </button>
                     </div>
                   </div>
                 </div>
