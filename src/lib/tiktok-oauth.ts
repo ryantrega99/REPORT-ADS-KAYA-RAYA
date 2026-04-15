@@ -147,14 +147,14 @@ ${connected ? `
 //  2. OAUTH CALLBACK
 // ============================================================
 export async function handleCallback(req: any, res: any) {
-  const { code, error, error_description } = req.query;
+  const { auth_code, code, error, error_description } = req.query;
 
   if (error) {
     console.error('[TikTok OAuth] Error:', error, error_description);
     return res.send(connectPageHTML({ error: error_description || error }));
   }
 
-  if (!code) {
+  if (!auth_code && !code) {
     return res.send(connectPageHTML({ error: 'Authorization code tidak ditemukan' }));
   }
 
@@ -165,7 +165,7 @@ export async function handleCallback(req: any, res: any) {
       body: JSON.stringify({
         app_id:     CONFIG.tiktok.appId,
         secret:     CONFIG.tiktok.appSecret,
-        auth_code:  code,
+        auth_code:  auth_code || code,
         grant_type: 'authorization_code',
       }),
     });
