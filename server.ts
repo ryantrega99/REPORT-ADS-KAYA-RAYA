@@ -970,6 +970,7 @@ app.get("/api/tiktok/auth", (req, res) => {
 });
 
 app.get("/api/tiktok/callback", handleCallback);
+app.get("/auth/tiktok/callback", handleCallback);
 
 // Vite middleware for development
 if (process.env.NODE_ENV !== "production") {
