@@ -17,18 +17,21 @@ const CONFIG = {
   },
 };
 
-// Initialize Firebase if not already done
-let db: any;
-try {
-  if (!getApps().length && CONFIG.firebase.apiKey) {
-    const app = initializeApp(CONFIG.firebase);
-    db = getFirestore(app);
-  } else {
-    // If already initialized in server.ts, we'll try to get the existing instance
-    db = getFirestore();
+// Initialize Firebase lazily
+let _db: any;
+function getDb() {
+  if (_db) return _db;
+  try {
+    if (getApps().length > 0) {
+      _db = getFirestore();
+    } else if (CONFIG.firebase.apiKey) {
+      const app = initializeApp(CONFIG.firebase);
+      _db = getFirestore(app);
+    }
+  } catch (e) {
+    console.error("TikTok OAuth: Firebase initialization failed", e);
   }
-} catch (e) {
-  console.error("TikTok OAuth: Firebase initialization failed", e);
+  return _db;
 }
 
 // ============================================================
@@ -174,6 +177,7 @@ export async function handleCallback(req: any, res: any) {
     const { access_token, advertiser_ids, scope } = tokenData.data;
 
     // Simpan token ke Firebase
+    const db = getDb();
     if (db) {
       await Promise.all(
         advertiser_ids.map((advertiserId: any) =>
@@ -208,6 +212,7 @@ export async function handleCallback(req: any, res: any) {
 // ============================================================
 
 export async function getToken(advertiserId: string) {
+  const db = getDb();
   if (!db) throw new Error("Firebase not initialized");
   const snap = await getDoc(doc(db, 'tiktok_tokens', String(advertiserId)));
 
@@ -223,6 +228,7 @@ export async function getToken(advertiserId: string) {
 }
 
 export async function revokeToken(advertiserId: string) {
+  const db = getDb();
   if (!db) return;
   await updateDoc(doc(db, 'tiktok_tokens', String(advertiserId)), {
     status:     'revoked',

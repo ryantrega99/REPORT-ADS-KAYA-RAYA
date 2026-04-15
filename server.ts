@@ -6,7 +6,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import cron from 'node-cron';
-import { connectPageHTML, handleCallback, fetchTikTokAPI, TikTokTokenError } from "./src/lib/tiktok-oauth";
+import { connectPageHTML, handleCallback, fetchTikTokAPI, TikTokTokenError } from "./src/lib/tiktok-oauth.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
