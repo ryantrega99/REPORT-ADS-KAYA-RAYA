@@ -961,10 +961,7 @@ app.get("/tiktok/connect", (req, res) => {
 });
 
 app.get("/api/tiktok/auth", (req, res) => {
-  const host = req.get('host');
-  const protocol = req.get('x-forwarded-proto') || req.protocol;
-  const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
-  const redirectUri = encodeURIComponent(`${baseUrl}/api/tiktok/callback`);
+  const redirectUri = encodeURIComponent(`https://report.formrbob.my.id/auth/tiktok/callback`);
   const authUrl = `https://business-api.tiktok.com/portal/auth?app_id=${TIKTOK_APP_ID}&state=mrbob&redirect_uri=${redirectUri}`;
   res.json({ url: authUrl });
 });

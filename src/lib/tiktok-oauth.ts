@@ -8,7 +8,7 @@ const CONFIG = {
   tiktok: {
     appId:       process.env.TIKTOK_APP_ID || '7628504693093711873',
     appSecret:   process.env.TIKTOK_SECRET || 'dca6f8305485436ca0a2045d532af0c92bc6d54c',
-    redirectUri: process.env.APP_URL ? `${process.env.APP_URL}/api/tiktok/callback` : '',
+    redirectUri: 'https://report.formrbob.my.id/auth/tiktok/callback',
   },
   firebase: {
     apiKey:      process.env.FIREBASE_API_KEY || 'AIzaSyARd4fFDkeErs-lT71HRlLCWkdvN3RkRQg',
