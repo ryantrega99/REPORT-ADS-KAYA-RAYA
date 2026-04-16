@@ -792,6 +792,8 @@ export default function App() {
   const [manualProduct, setManualProduct] = useState(PRODUCTS[0]);
   const [manualSpend, setManualSpend] = useState('');
   const [manualLeads, setManualLeads] = useState('');
+  const [manualImpressions, setManualImpressions] = useState('');
+  const [manualClicks, setManualClicks] = useState('');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualUser, setManualUser] = useState('');
 
@@ -1930,15 +1932,20 @@ export default function App() {
     }
 
     const now = new Date().toLocaleString('id-ID');
+    const impr = parseInt(manualImpressions) || 0;
+    const clks = parseInt(manualClicks) || 0;
+    const lds = parseInt(manualLeads) || 0;
+    const spnd = parseFloat(manualSpend) || 0;
+
     const newReport = {
       id: `manual_${Date.now()}`,
       platform: manualPlatform,
-      impressions: 0,
-      clicks: 0,
-      spend: parseFloat(manualSpend) || 0,
-      leads: parseInt(manualLeads) || 0,
-      ctr: '0%',
-      cpr: parseInt(manualLeads) > 0 ? parseFloat(manualSpend) / parseInt(manualLeads) : 0,
+      impressions: impr,
+      clicks: clks,
+      spend: spnd,
+      leads: lds,
+      ctr: impr > 0 ? ((clks / impr) * 100).toFixed(2) + '%' : '0%',
+      cpr: lds > 0 ? spnd / lds : 0,
       timestamp: now,
       date_range: manualDate,
       user_name: manualUser,
@@ -1952,6 +1959,8 @@ export default function App() {
     // Reset form
     setManualSpend('');
     setManualLeads('');
+    setManualImpressions('');
+    setManualClicks('');
   };
 
   const importAdsToApp = async (dataToImport?: any[] | React.MouseEvent) => {
@@ -4546,6 +4555,16 @@ ${reportSections}`;
                   <div>
                     <label className="label">Leads</label>
                     <input type="number" className="input h-11 text-xs" value={manualLeads} onChange={(e) => setManualLeads(e.target.value)} placeholder="0" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Impressions</label>
+                    <input type="number" className="input h-11 text-xs" value={manualImpressions} onChange={(e) => setManualImpressions(e.target.value)} placeholder="0" />
+                  </div>
+                  <div>
+                    <label className="label">Clicks</label>
+                    <input type="number" className="input h-11 text-xs" value={manualClicks} onChange={(e) => setManualClicks(e.target.value)} placeholder="0" />
                   </div>
                 </div>
               </div>
