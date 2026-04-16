@@ -786,6 +786,15 @@ export default function App() {
   const [fbCreatives, setFbCreatives] = useState<Creative[]>([]);
   const [isCreativesLoading, setIsCreativesLoading] = useState(false);
 
+  // Manual Report State
+  const [isManualReportModalOpen, setIsManualReportModalOpen] = useState(false);
+  const [manualPlatform, setManualPlatform] = useState<'Facebook' | 'Google' | 'TikTok'>('Facebook');
+  const [manualProduct, setManualProduct] = useState(PRODUCTS[0]);
+  const [manualSpend, setManualSpend] = useState('');
+  const [manualLeads, setManualLeads] = useState('');
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualUser, setManualUser] = useState('');
+
   // Google API Config State
   const [googleClientId, setGoogleClientId] = useState(localStorage.getItem('kayaraya_google_client_id') || GOOGLE_CONFIG.CLIENT_ID);
   const [googleApiKey, setGoogleApiKey] = useState(localStorage.getItem('kayaraya_google_api_key') || GOOGLE_CONFIG.API_KEY);
@@ -1912,6 +1921,37 @@ export default function App() {
       cpr: newVal > 0 ? updated[index].spend / newVal : 0
     };
     setAdsRawData(updated);
+  };
+
+  const handleAddManualReport = () => {
+    if (!manualSpend || !manualLeads || !manualUser) {
+      addToast('Harap isi semua field!', 'warn');
+      return;
+    }
+
+    const now = new Date().toLocaleString('id-ID');
+    const newReport = {
+      id: `manual_${Date.now()}`,
+      platform: manualPlatform,
+      impressions: 0,
+      clicks: 0,
+      spend: parseFloat(manualSpend) || 0,
+      leads: parseInt(manualLeads) || 0,
+      ctr: '0%',
+      cpr: parseInt(manualLeads) > 0 ? parseFloat(manualSpend) / parseInt(manualLeads) : 0,
+      timestamp: now,
+      date_range: manualDate,
+      user_name: manualUser,
+      product: manualProduct,
+    };
+
+    setAdsRawData(prev => [newReport, ...prev]);
+    setIsManualReportModalOpen(false);
+    addToast('Laporan manual ditambahkan ke daftar fetch.');
+    
+    // Reset form
+    setManualSpend('');
+    setManualLeads('');
   };
 
   const importAdsToApp = async (dataToImport?: any[] | React.MouseEvent) => {
@@ -3340,9 +3380,21 @@ ${reportSections}`;
                     </div>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-sm font-black text-[var(--text-base)]">Fetch Results ({adsRawData.length})</h3>
-                      <button onClick={importAdsToApp} className="h-10 px-6 rounded-xl bg-indigo-600 text-white font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center gap-2">
-                        <Download size={14} /> Import to Dashboard
-                      </button>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => {
+                            setManualUser(fetchUser || currentUser?.name || '');
+                            setManualProduct(fetchProduct === 'all' ? PRODUCTS[0] : fetchProduct);
+                            setIsManualReportModalOpen(true);
+                          }} 
+                          className="h-10 px-6 rounded-xl bg-emerald-600 text-white font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center gap-2"
+                        >
+                          <Plus size={14} /> Add Manual Report
+                        </button>
+                        <button onClick={importAdsToApp} className="h-10 px-6 rounded-xl bg-indigo-600 text-white font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center gap-2">
+                          <Download size={14} /> Import to Dashboard
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                       {adsRawData.map((c, i) => (
@@ -4441,6 +4493,64 @@ ${reportSections}`;
                     </div>
                   ) : 'Save Changes'}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isManualReportModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsManualReportModalOpen(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-md bg-[var(--bg-surface)] rounded-[2.5rem] shadow-2xl shadow-indigo-900/10 overflow-hidden">
+              <div className="p-8 border-b border-[var(--border-base)] flex justify-between items-center">
+                <h2 className="text-2xl font-black tracking-tighter text-[var(--text-base)]">Add Manual Report</h2>
+                <button onClick={() => setIsManualReportModalOpen(false)} className="w-10 h-10 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] transition-all">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-8 space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Platform</label>
+                    <select className="input h-11 text-xs" value={manualPlatform} onChange={(e) => setManualPlatform(e.target.value as any)}>
+                      <option value="Facebook">Facebook</option>
+                      <option value="Google">Google</option>
+                      <option value="TikTok">TikTok</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Date</label>
+                    <input type="date" className="input h-11 text-xs" value={manualDate} onChange={(e) => setManualDate(e.target.value)} />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Product</label>
+                  <select className="input h-11 text-xs" value={manualProduct} onChange={(e) => setManualProduct(e.target.value)}>
+                    {PRODUCTS.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Assign to User</label>
+                  <select className="input h-11 text-xs" value={manualUser} onChange={(e) => setManualUser(e.target.value)}>
+                    <option value="">Select User</option>
+                    {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Spend (Rp)</label>
+                    <input type="number" className="input h-11 text-xs" value={manualSpend} onChange={(e) => setManualSpend(e.target.value)} placeholder="0" />
+                  </div>
+                  <div>
+                    <label className="label">Leads</label>
+                    <input type="number" className="input h-11 text-xs" value={manualLeads} onChange={(e) => setManualLeads(e.target.value)} placeholder="0" />
+                  </div>
+                </div>
+              </div>
+              <div className="p-8 border-t border-[var(--border-base)] bg-[var(--bg-subtle)]/50">
+                <button onClick={handleAddManualReport} className="btn btn-primary w-full h-14 text-lg">Add to List</button>
               </div>
             </motion.div>
           </div>
