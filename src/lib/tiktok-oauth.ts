@@ -7,7 +7,7 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'f
 const CONFIG = {
   tiktok: {
     appId:       process.env.TIKTOK_APP_ID || '7628504693093711873',
-    appSecret:   process.env.TIKTOK_SECRET || '',
+    appSecret:   process.env.TIKTOK_SECRET || 'dca6f8305485436ca0a2045d532af0c92bc6d54c',
     redirectUri: process.env.APP_URL ? `${process.env.APP_URL}/api/tiktok/callback` : '',
   },
   firebase: {
@@ -166,8 +166,7 @@ export async function handleCallback(req: any, res: any) {
       body: JSON.stringify({
         app_id:     CONFIG.tiktok.appId,
         secret:     CONFIG.tiktok.appSecret,
-        auth_code:  auth_code || code,
-        grant_type: 'authorization_code',
+        auth_code:  auth_code || code
       }),
     });
 
