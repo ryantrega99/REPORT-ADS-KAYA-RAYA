@@ -626,7 +626,7 @@ app.post("/api/platforms/delete", async (req, res) => {
       const params = {
         report_type: 'BASIC',
         data_level: 'AUCTION_CAMPAIGN',
-        dimensions: JSON.stringify(['stat_time_day']),
+        dimensions: JSON.stringify(['stat_time_day', 'campaign_id', 'campaign_name']),
         metrics: JSON.stringify(['spend', 'impressions', 'clicks', 'conversion']),
         start_date: start,
         end_date: end,

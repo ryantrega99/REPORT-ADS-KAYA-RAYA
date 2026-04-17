@@ -761,6 +761,10 @@ export default function App() {
   // Ads Data State
   const [adsRawData, setAdsRawData] = useState<any[]>([]);
   const [isAdsLoading, setIsAdsLoading] = useState(false);
+  const [adsResultSearch, setAdsResultSearch] = useState('');
+  const [adsResultFilterProduct, setAdsResultFilterProduct] = useState('all');
+  const [adsResultFilterUser, setAdsResultFilterUser] = useState('all');
+  const [adsResultFilterPlatform, setAdsResultFilterPlatform] = useState('all');
   const [gadsAdvertisers, setGadsAdvertisers] = useState<string[]>(() => {
     const saved = localStorage.getItem('kayaraya_gads_advertisers');
     if (saved) {
@@ -1684,6 +1688,28 @@ export default function App() {
       let allProcessed: any[] = [];
       const now = new Date().toLocaleString('id-ID');
 
+      // Get assigned products for the target user to use in auto-matching
+      const targetUser = users.find(u => u.name === fetchUser);
+      const effectiveProducts = (targetUser?.assignedProducts && targetUser.assignedProducts.length > 0) 
+        ? targetUser.assignedProducts 
+        : PRODUCTS;
+
+      const discoverProduct = (name: string, available: string[]) => {
+        const cn = name.toLowerCase();
+        // Exact match first
+        let match = available.find(p => cn.includes(p.toLowerCase()));
+        if (match) return match;
+        
+        // Match by core keyword (removing common prefixes)
+        match = available.find(p => {
+          const core = p.replace(/^(LKBI|Kelas Online|4 Buku|Paket)\s+/i, '').trim();
+          return core.length > 2 && cn.includes(core.toLowerCase());
+        });
+        if (match) return match;
+
+        return 'Umum';
+      };
+
       // Fetch Facebook Ads
       if (fbTokenTrimmed && fbActiveIds.length > 0) {
         const fbByDate: Record<string, { spend: number, impressions: number, clicks: number, leads: number }> = {};
@@ -1720,37 +1746,31 @@ export default function App() {
             if (spend === 0 && impressions === 0) return;
 
             const date = c.date_start;
-            if (!fbByDate[date]) fbByDate[date] = { spend: 0, impressions: 0, clicks: 0, leads: 0 };
-
             const actions = c.actions || [];
             const leadAct = actions.find((a: any) => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
             const leads = leadAct ? parseInt(leadAct.value) : 0;
-            
-            fbByDate[date].impressions += impressions;
-            fbByDate[date].clicks += parseInt(c.clicks) || 0;
-            fbByDate[date].spend += spend;
-            fbByDate[date].leads += leads;
-          });
-        }
+            const clicks = parseInt(c.clicks) || 0;
 
-        Object.entries(fbByDate).forEach(([date, stats]) => {
-          if (stats.spend > 0 || stats.impressions > 0) {
+            // Auto-detect product
+            const detectedProduct = discoverProduct(c.campaign_name, effectiveProducts);
+
             allProcessed.push({
-              id: `fb_${date}`,
+              id: `fb_${c.campaign_id}_${date}_${Math.random().toString(36).substr(2, 5)}`,
               platform: 'Facebook',
-              impressions: stats.impressions,
-              clicks: stats.clicks,
-              spend: stats.spend,
-              leads: stats.leads,
-              ctr: stats.impressions > 0 ? ((stats.clicks / stats.impressions) * 100).toFixed(2) + '%' : '0.00%',
-              cpr: stats.leads > 0 ? stats.spend / stats.leads : 0,
+              campaign_name: c.campaign_name,
+              impressions,
+              clicks,
+              spend,
+              leads,
+              ctr: impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) + '%' : '0.00%',
+              cpr: leads > 0 ? spend / leads : 0,
               timestamp: now,
               date_range: date,
               user_name: fetchUser || currentUser?.name || 'Unknown',
-              product: fetchProduct,
+              product: detectedProduct,
             });
-          }
-        });
+          });
+        }
       }
 
       // Fetch Google Ads
@@ -1813,38 +1833,30 @@ export default function App() {
           (result.campaigns || []).forEach((c: any) => {
             const spend = parseFloat(c.spend) || 0;
             const impressions = parseInt(c.impressions) || 0;
+            const clicks = parseInt(c.clicks) || 0;
+            const leads = Math.round(parseFloat(c.conversions) || 0);
             if (spend === 0 && impressions === 0) return;
 
-            const date = c.tanggal;
-            if (!gaByDate[date]) gaByDate[date] = { spend: 0, impressions: 0, clicks: 0, leads: 0 };
+            // Auto-detect product
+            const detectedProduct = discoverProduct(c.name, effectiveProducts);
 
-            const conv = parseFloat(c.conversions) || 0;
-            
-            gaByDate[date].impressions += impressions;
-            gaByDate[date].clicks += parseInt(c.clicks) || 0;
-            gaByDate[date].spend += spend;
-            gaByDate[date].leads += Math.round(conv);
+            allProcessed.push({
+              id: `ga_${c.id}_${c.tanggal}_${Math.random().toString(36).substr(2, 5)}`,
+              platform: 'Google',
+              campaign_name: c.name,
+              impressions,
+              clicks,
+              spend,
+              leads,
+              ctr: impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) + '%' : '0.00%',
+              cpr: leads > 0 ? spend / leads : 0,
+              timestamp: now,
+              date_range: c.tanggal,
+              user_name: fetchUser || currentUser?.name || 'Unknown',
+              product: detectedProduct,
+            });
           });
         }
-
-        Object.entries(gaByDate).forEach(([date, stats]) => {
-          if (stats.spend > 0 || stats.impressions > 0) {
-            allProcessed.push({
-              id: `ga_${date}`,
-              platform: 'Google',
-              impressions: stats.impressions,
-              clicks: stats.clicks,
-              spend: stats.spend,
-              leads: stats.leads,
-              ctr: stats.impressions > 0 ? ((stats.clicks / stats.impressions) * 100).toFixed(2) + '%' : '0.00%',
-              cpr: stats.leads > 0 ? stats.spend / stats.leads : 0,
-              timestamp: now,
-              date_range: date,
-              user_name: fetchUser || currentUser?.name || 'Unknown',
-              product: fetchProduct,
-            });
-          }
-        });
       }
 
       // Fetch TikTok Ads
@@ -1876,36 +1888,32 @@ export default function App() {
           (result.data || []).forEach((c: any) => {
             const spend = parseFloat(c.metrics.spend) || 0;
             const impressions = parseInt(c.metrics.impressions) || 0;
+            const clicks = parseInt(c.metrics.clicks) || 0;
+            const leads = parseInt(c.metrics.conversion) || 0;
             if (spend === 0 && impressions === 0) return;
 
             const date = c.dimensions.stat_time_day.split(' ')[0];
-            if (!ttByDate[date]) ttByDate[date] = { spend: 0, impressions: 0, clicks: 0, leads: 0 };
 
-            ttByDate[date].impressions += impressions;
-            ttByDate[date].clicks += parseInt(c.metrics.clicks) || 0;
-            ttByDate[date].spend += spend;
-            ttByDate[date].leads += parseInt(c.metrics.conversion) || 0;
-          });
-        }
+            // Auto-detect product
+            const detectedProduct = discoverProduct(c.dimensions.campaign_name, effectiveProducts);
 
-        Object.entries(ttByDate).forEach(([date, stats]) => {
-          if (stats.spend > 0 || stats.impressions > 0) {
             allProcessed.push({
-              id: `tt_${date}`,
+              id: `tt_${c.dimensions.campaign_id}_${date}_${Math.random().toString(36).substr(2, 5)}`,
               platform: 'TikTok',
-              impressions: stats.impressions,
-              clicks: stats.clicks,
-              spend: stats.spend,
-              leads: stats.leads,
-              ctr: stats.impressions > 0 ? ((stats.clicks / stats.impressions) * 100).toFixed(2) + '%' : '0.00%',
-              cpr: stats.leads > 0 ? stats.spend / stats.leads : 0,
+              campaign_name: c.dimensions.campaign_name,
+              impressions,
+              clicks,
+              spend,
+              leads,
+              ctr: impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) + '%' : '0.00%',
+              cpr: leads > 0 ? spend / leads : 0,
               timestamp: now,
               date_range: date,
               user_name: fetchUser || currentUser?.name || 'Unknown',
-              product: fetchProduct,
+              product: detectedProduct,
             });
-          }
-        });
+          });
+        }
       }
 
       setAdsRawData(allProcessed);
@@ -1920,15 +1928,26 @@ export default function App() {
     }
   };
 
-  const handleEditLeads = (index: number, val: string) => {
+  const handleEditLeads = (id: string, val: string) => {
     const newVal = parseInt(val) || 0;
-    const updated = [...adsRawData];
-    updated[index] = { 
-      ...updated[index], 
-      leads: newVal,
-      cpr: newVal > 0 ? updated[index].spend / newVal : 0
-    };
-    setAdsRawData(updated);
+    setAdsRawData(prev => prev.map(item => {
+      if (item.id === id) {
+        return { 
+          ...item, 
+          leads: newVal,
+          cpr: newVal > 0 ? item.spend / newVal : 0
+        };
+      }
+      return item;
+    }));
+  };
+
+  const handleEditResultProduct = (id: string, product: string) => {
+    setAdsRawData(prev => prev.map(item => item.id === id ? { ...item, product } : item));
+  };
+
+  const handleEditResultUser = (id: string, user_name: string) => {
+    setAdsRawData(prev => prev.map(item => item.id === id ? { ...item, user_name } : item));
   };
 
   const handleAddManualReport = () => {
@@ -1978,18 +1997,18 @@ export default function App() {
     const newCampaigns: Campaign[] = rawData.map(c => {
       const camp: any = {
         id: c.id,
-        name: c.platform + ' Ads Total',
+        name: c.campaign_name || (c.platform + ' Ads Total'),
         platform: c.platform === 'Facebook' ? 'fb' : (c.platform === 'TikTok' ? 'tiktok' : 'google'),
-        product: fetchProduct === 'all' ? PRODUCTS[0] : fetchProduct,
+        product: c.product || 'Umum',
         spend: Math.round(c.spend || 0),
         leads: c.leads || 0,
         ctr: typeof c.ctr === 'string' ? c.ctr.replace('%', '') : (c.ctr || 0).toFixed(2),
-        tanggal: c.date_range || new Date().toLocaleDateString('id-ID'),
+        tanggal: c.date_range || new Date().toISOString().split('T')[0],
         date_range: c.date_range || '',
         impressions: c.impressions || 0,
         clicks: c.clicks || 0,
-        user_id: users.find(u => u.name === (fetchUser || currentUser?.name))?.id || uid,
-        user_name: fetchUser || currentUser?.name || 'Unknown'
+        user_id: users.find(u => u.name === c.user_name)?.id || uid,
+        user_name: c.user_name || 'Unknown'
       };
 
       if (c.platform === 'Facebook') camp.fb_campaign_id = c.id;
@@ -3325,19 +3344,6 @@ ${reportSections}`;
                                 ))}
                               </select>
                             </div>
-                            <div>
-                              <label className="label">Product</label>
-                              <select 
-                                className="input h-11 text-xs" 
-                                value={fetchProduct} 
-                                onChange={(e) => setFetchProduct(e.target.value)}
-                              >
-                                <option value="all">All Products</option>
-                                {PRODUCTS.map(p => (
-                                  <option key={p} value={p}>{p}</option>
-                                ))}
-                              </select>
-                            </div>
                           </div>
 
                           <button 
@@ -3393,8 +3399,68 @@ ${reportSections}`;
                         <h4 className="text-sm font-black text-slate-900 tracking-tight">JANGAN LUPA EDIT JUMLAH LEADS KAWAN ✨</h4>
                       </div>
                     </div>
+
+                    <div className="flex flex-col md:flex-row gap-3 mb-6 bg-[var(--bg-subtle)] p-4 rounded-2xl border border-[var(--border-base)]">
+                      <div className="flex-1 relative">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                        <input 
+                          type="text" 
+                          placeholder="Search campaigns..." 
+                          className="input h-10 pl-10 text-xs" 
+                          value={adsResultSearch} 
+                          onChange={(e) => setAdsResultSearch(e.target.value)} 
+                        />
+                      </div>
+                      <select className="input h-10 text-xs w-full md:w-32" value={adsResultFilterPlatform} onChange={(e) => setAdsResultFilterPlatform(e.target.value)}>
+                        <option value="all">Platform</option>
+                        <option value="Facebook">Meta</option>
+                        <option value="Google">Google</option>
+                        <option value="TikTok">TikTok</option>
+                      </select>
+                      <select className="input h-10 text-xs w-full md:w-40" value={adsResultFilterProduct} onChange={(e) => setAdsResultFilterProduct(e.target.value)}>
+                        <option value="all">Product</option>
+                        <option value="Umum">Umum</option>
+                        {PRODUCTS.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      <select className="input h-10 text-xs w-full md:w-40" value={adsResultFilterUser} onChange={(e) => setAdsResultFilterUser(e.target.value)}>
+                        <option value="all">User</option>
+                        {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                      </select>
+                      <button 
+                        onClick={() => {
+                          setAdsRawData(prev => prev.map(item => {
+                            const matchesSearch = !adsResultSearch || (item.product + item.date_range + item.user_name).toLowerCase().includes(adsResultSearch.toLowerCase());
+                            const matchesPlatform = adsResultFilterPlatform === 'all' || item.platform === adsResultFilterPlatform;
+                            const matchesProduct = adsResultFilterProduct === 'all' || item.product === adsResultFilterProduct;
+                            const matchesUser = adsResultFilterUser === 'all' || item.user_name === adsResultFilterUser;
+                            
+                            if (matchesSearch && matchesPlatform && matchesProduct && matchesUser) {
+                              return {
+                                ...item,
+                                user_name: fetchUser || item.user_name
+                              };
+                            }
+                            return item;
+                          }));
+                          addToast('Batch assign completed for filtered items!', 'success');
+                        }}
+                        className="btn btn-outline h-10 px-3 border-indigo-200 text-indigo-600 shrink-0"
+                        title="Assign selected User/Product to all filtered items"
+                      >
+                        <Zap size={16} />
+                      </button>
+                    </div>
+
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-sm font-black text-[var(--text-base)]">Fetch Results ({adsRawData.length})</h3>
+                      <h3 className="text-sm font-black text-[var(--text-base)]">Fetch Results ({
+                        adsRawData.filter(c => {
+                          const matchesSearch = !adsResultSearch || (c.product + c.date_range + c.user_name).toLowerCase().includes(adsResultSearch.toLowerCase());
+                          const matchesPlatform = adsResultFilterPlatform === 'all' || c.platform === adsResultFilterPlatform;
+                          const matchesProduct = adsResultFilterProduct === 'all' || c.product === adsResultFilterProduct;
+                          const matchesUser = adsResultFilterUser === 'all' || c.user_name === adsResultFilterUser;
+                          return matchesSearch && matchesPlatform && matchesProduct && matchesUser;
+                        }).length
+                      })</h3>
                       <div className="flex gap-2">
                         <button 
                           onClick={() => {
@@ -3412,66 +3478,89 @@ ${reportSections}`;
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {adsRawData.map((c, i) => (
-                        <div key={i} className="bento-card p-5 flex flex-col gap-4">
+                      {adsRawData
+                        .filter(c => {
+                          const matchesSearch = !adsResultSearch || (c.product + c.date_range + (c.campaign_name || '') + c.user_name).toLowerCase().includes(adsResultSearch.toLowerCase());
+                          const matchesPlatform = adsResultFilterPlatform === 'all' || c.platform === adsResultFilterPlatform;
+                          const matchesProduct = adsResultFilterProduct === 'all' || c.product === adsResultFilterProduct;
+                          const matchesUser = adsResultFilterUser === 'all' || c.user_name === adsResultFilterUser;
+                          return matchesSearch && matchesPlatform && matchesProduct && matchesUser;
+                        })
+                        .map((c, i) => (
+                        <div key={c.id || i} className="bento-card p-5 flex flex-col gap-4">
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-3">
                               <div className={cn(
                                 "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
                                 c.platform === 'Facebook' ? "bg-blue-50 text-blue-600" : 
-                                c.platform === 'TikTok' ? "bg-pink-50 text-pink-600" : "bg-red-50 text-red-600"
+                                c.platform === 'TikTok' ? "bg-pink-100/10 text-pink-600" : "bg-red-50 text-red-600"
                               )}>
                                 {c.platform === 'Facebook' ? <Facebook size={20} /> : 
                                  c.platform === 'TikTok' ? <Zap size={20} /> : <Globe size={20} />}
                               </div>
-                              <div>
-                                <h4 className="font-bold text-sm text-[var(--text-base)]">{c.product || 'Unknown Product'}</h4>
+                              <div className="flex-1 min-w-0">
+                                <select 
+                                  className="text-sm font-black text-slate-900 bg-transparent border-none p-0 outline-none focus:ring-0 max-w-[150px] truncate disabled:opacity-100 disabled:cursor-default"
+                                  value={c.product || 'Umum'}
+                                  onChange={(e) => handleEditResultProduct(c.id, e.target.value)}
+                                  disabled
+                                >
+                                  <option value="Umum">Umum</option>
+                                  {PRODUCTS.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                                {c.campaign_name && (
+                                  <p className="text-[10px] font-medium text-slate-500 truncate max-w-[150px]" title={c.campaign_name}>
+                                    {c.campaign_name}
+                                  </p>
+                                )}
                                 <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mt-0.5">{c.date_range}</p>
                               </div>
                             </div>
                             <span className={cn(
-                              "px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
-                              c.platform === 'Facebook' ? "bg-blue-100 text-blue-700" : 
-                              c.platform === 'TikTok' ? "bg-pink-100 text-pink-700" : "bg-red-100 text-red-700"
+                              "px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none",
+                              c.platform === 'Facebook' ? "bg-blue-600 text-white" : 
+                              c.platform === 'TikTok' ? "bg-pink-600 text-white" : "bg-red-600 text-white"
                             )}>
                               {c.platform}
                             </span>
                           </div>
                           
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Spend</p>
+                            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.15em] mb-1">Spend</p>
                               <p className="font-mono font-bold text-blue-700 text-sm">Rp {fmtNum(c.spend)}</p>
                             </div>
-                            <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-1">Leads</p>
+                            <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-amber-500 uppercase tracking-[0.15em] mb-1">Leads</p>
                               <input 
                                 type="number" 
-                                className="w-full bg-transparent border-none font-mono font-black text-yellow-700 text-sm outline-none focus:ring-0 p-0"
+                                className="w-full bg-transparent border-none font-mono font-black text-amber-700 text-sm outline-none focus:ring-0 p-0"
                                 value={c.leads}
-                                onChange={(e) => handleEditLeads(i, e.target.value)}
+                                onChange={(e) => handleEditLeads(c.id, e.target.value)}
                               />
                             </div>
-                            <div className="bg-green-50 border border-green-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-green-500 uppercase tracking-widest mb-1">CPR</p>
-                              <p className="font-mono font-black text-green-600 text-sm">Rp {fmtNum(Math.round(c.cpr || 0))}</p>
+                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.15em] mb-1">CPR</p>
+                              <p className="font-mono font-black text-emerald-600 text-sm">Rp {fmtNum(Math.round(c.cpr || 0))}</p>
                             </div>
-                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Impressions</p>
+                            <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Impr</p>
                               <p className="font-mono font-bold text-slate-700 text-sm">{fmtNum(parseInt(c.impressions))}</p>
-                            </div>
-                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Clicks</p>
-                              <p className="font-mono font-bold text-slate-700 text-sm">{fmtNum(parseInt(c.clicks))}</p>
                             </div>
                           </div>
                           
-                          <div className="flex items-center justify-between pt-3 border-t border-[var(--border-base)] mt-auto">
-                            <div className="flex items-center gap-2 text-[var(--text-muted)]">
-                              <UserCircle size={14} />
-                              <span className="text-[10px] font-bold">{c.user_name}</span>
+                          <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
+                            <div className="flex items-center gap-2">
+                              <UserCircle size={14} className="text-slate-400" />
+                              <select 
+                                className="text-[10px] font-bold text-slate-600 bg-transparent border-none p-0 outline-none focus:ring-0"
+                                value={c.user_name}
+                                onChange={(e) => handleEditResultUser(c.id, e.target.value)}
+                              >
+                                {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                              </select>
                             </div>
-                            <div className="flex items-center gap-2 text-[var(--text-muted)]">
+                            <div className="flex items-center gap-2 text-slate-400">
                               <Clock size={14} />
                               <span className="text-[10px] font-bold">{c.timestamp}</span>
                             </div>
