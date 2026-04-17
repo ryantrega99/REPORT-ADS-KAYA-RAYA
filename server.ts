@@ -674,7 +674,7 @@ app.post("/api/platforms/delete", async (req, res) => {
   // API Route for Google Ads
   app.post("/api/google-ads", async (req, res) => {
     try {
-      const { customerId, dateRange, startDate, endDate, gadsRefreshToken } = req.body;
+      const { customerId, dateRange, startDate, endDate, gadsRefreshToken, gadsManagerId } = req.body;
 
       if (!customerId) {
         return res.status(400).json({ ok: false, error: "Customer ID is required" });
@@ -687,6 +687,9 @@ app.post("/api/platforms/delete", async (req, res) => {
       
       // Use user-provided refresh token or fallback to global one
       const REFRESH_TOKEN = gadsRefreshToken || process.env.GADS_REFRESH_TOKEN;
+      
+      // Use user-provided Manager ID or fallback to global one
+      const FINAL_MCC_ID = gadsManagerId || MCC_ID;
 
       if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !DEVELOPER_TOKEN) {
         return res.status(500).json({ 
@@ -725,7 +728,7 @@ app.post("/api/platforms/delete", async (req, res) => {
       }
       const accessToken = tokenData.access_token;
       const cleanCustomerId = String(customerId).replace(/\D/g, "");
-      const cleanMccId = MCC_ID ? String(MCC_ID).replace(/\D/g, "") : "";
+      const cleanMccId = FINAL_MCC_ID ? String(FINAL_MCC_ID).replace(/\D/g, "") : "";
 
       // 2. Fetch Data from Google Ads using the library
       const { GoogleAdsApi } = await import("google-ads-api");
@@ -894,8 +897,8 @@ app.post("/api/platforms/delete", async (req, res) => {
         }
       }
 
-      if (errorMsg.includes("The caller does not have permission")) {
-        errorMsg = "GAds Error: 'The caller does not have permission'. Ini berarti email Anda tidak punya akses ke akun ini, atau MCC ID (Manager ID) salah/tidak terhubung ke akun ini.";
+      if (errorMsg.includes("The caller does not have permission") || errorMsg.includes("User doesn't have permission")) {
+        errorMsg = "GAds Error: 'Permission Denied'. Jika ID ini adalah akun klien, pastikan 'Manager Customer ID' di Setup API sudah diisi dengan ID Manager (MCC) Anda.";
       }
       
       res.status(500).json({ ok: false, error: errorMsg });
@@ -905,13 +908,21 @@ app.post("/api/platforms/delete", async (req, res) => {
   // API Route to test Google Ads connection
   app.get("/api/google-ads/test", async (req, res) => {
     try {
-      const { gadsRefreshToken } = req.query;
+      const { gadsRefreshToken, gadsManagerId } = req.query;
       const CLIENT_ID = process.env.GADS_CLIENT_ID;
       const CLIENT_SECRET = process.env.GADS_CLIENT_SECRET;
+      const DEVELOPER_TOKEN = process.env.GADS_DEVELOPER_TOKEN;
+      const MCC_ID = process.env.GADS_MCC_ID;
+      
       const REFRESH_TOKEN = (gadsRefreshToken as string) || process.env.GADS_REFRESH_TOKEN;
+      const FINAL_MCC_ID = (gadsManagerId as string) || MCC_ID;
 
       if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
-        return res.status(500).json({ ok: false, error: "Missing credentials in environment variables." });
+        return res.status(500).json({ ok: false, error: "Missing GAds credentials in environment variables." });
+      }
+
+      if (!DEVELOPER_TOKEN) {
+        return res.status(500).json({ ok: false, error: "Missing GADS_DEVELOPER_TOKEN in environment variables." });
       }
 
       const cleanId = (CLIENT_ID || "").replace(/\s+/g, '').replace(/^["']|["']$/g, '');

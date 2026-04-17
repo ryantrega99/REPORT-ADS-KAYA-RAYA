@@ -49,6 +49,7 @@ export interface User {
   fbToken?: string;
   fbAdvertisers?: string[];
   gadsRefreshToken?: string;
+  gadsManagerId?: string;
   gadsAdvertisers?: string[];
   ttToken?: string;
   ttAdvertisers?: string[];

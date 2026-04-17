@@ -726,6 +726,7 @@ export default function App() {
   // Setup State
   const [fbToken, setFbToken] = useState(localStorage.getItem('kayaraya_fb_token') || '');
   const [gadsRefreshToken, setGadsRefreshToken] = useState(localStorage.getItem('kayaraya_gads_refresh_token') || '');
+  const [gadsManagerId, setGadsManagerId] = useState(localStorage.getItem('kayaraya_gads_manager_id') || '');
   const [ttToken, setTtToken] = useState(localStorage.getItem('kayaraya_tt_token') || '');
   const [fbAdvertisers, setFbAdvertisers] = useState<string[]>(() => {
     const saved = localStorage.getItem('kayaraya_fb_advertisers_v2');
@@ -1535,7 +1536,9 @@ export default function App() {
               customerId: cid,
               dateRange: 'CUSTOM',
               startDate: startStr,
-              endDate: endStr
+              endDate: endStr,
+              gadsRefreshToken: gadsRefreshToken.trim(),
+              gadsManagerId: gadsManagerId.trim()
             })
           });
           const result = await res.json();
@@ -1631,6 +1634,7 @@ export default function App() {
           id: currentUser.id,
           fbToken,
           gadsRefreshToken,
+          gadsManagerId,
           ttToken,
           fbAdvertisers,
           gadsAdvertisers,
@@ -1646,6 +1650,7 @@ export default function App() {
         addToast('Automation configuration saved to cloud!');
         localStorage.setItem('kayaraya_fb_token', fbToken);
         localStorage.setItem('kayaraya_gads_refresh_token', gadsRefreshToken);
+        localStorage.setItem('kayaraya_gads_manager_id', gadsManagerId);
         localStorage.setItem('kayaraya_tt_token', ttToken);
         localStorage.setItem('kayaraya_wa_token', waToken);
         localStorage.setItem('kayaraya_wa_target', waTarget);
@@ -1756,7 +1761,8 @@ export default function App() {
           const payload: any = {
             customerId: id.replace(/\D/g, ''),
             includePaused: true,
-            gadsRefreshToken: gadsRefreshToken.trim()
+            gadsRefreshToken: gadsRefreshToken.trim(),
+            gadsManagerId: gadsManagerId.trim()
           };
           
           if (gadsDatePreset === 'CUSTOM') {
@@ -2035,7 +2041,7 @@ export default function App() {
     }
     addToast(`Menghubungkan ke Google Ads (${cid})...`, 'info');
     try {
-      const res = await fetch(`/api/google-ads/test?gadsRefreshToken=${encodeURIComponent(gadsRefreshToken)}`).catch(e => {
+      const res = await fetch(`/api/google-ads/test?gadsRefreshToken=${encodeURIComponent(gadsRefreshToken)}&gadsManagerId=${encodeURIComponent(gadsManagerId)}`).catch(e => {
         throw new Error(`Koneksi ke server lokal gagal: ${e.message}`);
       });
       
@@ -3887,6 +3893,11 @@ ${reportSections}`;
                         <label className="label">Refresh Token (Optional per User)</label>
                         <input className="input h-11" type="password" value={gadsRefreshToken} onChange={(e) => setGadsRefreshToken(e.target.value)} placeholder="1//0xxxx..." />
                         <p className="text-[9px] text-[var(--text-muted)] mt-1 italic">Kosongkan jika ingin menggunakan token global dari Admin.</p>
+                      </div>
+                      <div>
+                        <label className="label">Manager Customer ID (Optional per User)</label>
+                        <input className="input h-11" value={gadsManagerId} onChange={(e) => setGadsManagerId(e.target.value)} placeholder="318-863-1056" />
+                        <p className="text-[9px] text-[var(--text-muted)] mt-1 italic">Wajib jika Customer ID di bawah adalah Client Account (bukan Manager langsung).</p>
                       </div>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Customer IDs (Optional)</h4>
