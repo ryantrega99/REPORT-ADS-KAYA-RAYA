@@ -855,30 +855,42 @@ export default function App() {
     loadGapi();
   }, [googleClientId, googleApiKey]);
 
-  useEffect(() => {
-    const fetchConfigFromBackend = async () => {
-      try {
-        const res = await fetch('/api/config');
-        if (!res.ok) return;
-        const config = await res.json();
-        
-        const isDefaultId = googleClientId.includes('GANTI_DENGAN') || !googleClientId;
-        const isDefaultKey = googleApiKey.includes('GANTI_DENGAN') || !googleApiKey;
+  const fetchConfigFromBackend = useCallback(async (showToast = false) => {
+    try {
+      const res = await fetch('/api/config');
+      if (!res.ok) return;
+      const config = await res.json();
+      
+      let updated = false;
+      const isDefaultId = !googleClientId || googleClientId.includes('GANTI_DENGAN');
+      const isDefaultKey = !googleApiKey || googleApiKey.includes('GANTI_DENGAN');
 
-        if (config.googleClientId && isDefaultId) {
-          setGoogleClientId(config.googleClientId);
-          localStorage.setItem('kayaraya_google_client_id', config.googleClientId);
-        }
-        if (config.googleApiKey && isDefaultKey) {
-          setGoogleApiKey(config.googleApiKey);
-          localStorage.setItem('kayaraya_google_api_key', config.googleApiKey);
-        }
-      } catch (err) {
-        console.error("Failed to fetch Google API config from server:", err);
+      if (config.googleClientId && isDefaultId) {
+        setGoogleClientId(config.googleClientId);
+        localStorage.setItem('kayaraya_google_client_id', config.googleClientId);
+        updated = true;
       }
-    };
+      if (config.googleApiKey && isDefaultKey) {
+        setGoogleApiKey(config.googleApiKey);
+        localStorage.setItem('kayaraya_google_api_key', config.googleApiKey);
+        updated = true;
+      }
+
+      if (updated) {
+        if (showToast) addToast('Kredensial Google API berhasil ditarik dari server!', 'success');
+        initGoogleApis();
+      } else if (showToast) {
+        addToast('Tidak ada kredensial baru ditemukan di server.', 'info');
+      }
+    } catch (err) {
+      console.error("Failed to fetch Google API config from server:", err);
+      if (showToast) addToast('Gagal menghubungi server.', 'warn');
+    }
+  }, [googleClientId, googleApiKey, initGoogleApis]);
+
+  useEffect(() => {
     fetchConfigFromBackend();
-  }, []);
+  }, [fetchConfigFromBackend]);
 
   useEffect(() => {
     initGoogleApis();
@@ -4771,15 +4783,23 @@ ${reportSections}`;
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mt-6">
-                    <button onClick={() => {
-                      localStorage.setItem('kayaraya_google_client_id', googleClientId.trim());
-                      localStorage.setItem('kayaraya_google_api_key', googleApiKey.trim());
-                      addToast('Configuration saved. Re-initializing...', 'success');
-                      initGoogleApis();
-                      setIsGoogleApiModalOpen(false);
-                    }} className="btn btn-primary h-12 text-sm font-bold">Save Config</button>
-                    <button onClick={() => setIsGoogleApiModalOpen(false)} className="btn btn-outline h-12 text-sm font-bold">Cancel</button>
+                  <div className="flex flex-col gap-3 mt-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <button onClick={() => {
+                        localStorage.setItem('kayaraya_google_client_id', googleClientId.trim());
+                        localStorage.setItem('kayaraya_google_api_key', googleApiKey.trim());
+                        addToast('Configuration saved. Re-initializing...', 'success');
+                        initGoogleApis();
+                        setIsGoogleApiModalOpen(false);
+                      }} className="btn btn-primary h-12 text-sm font-bold">Save Config</button>
+                      <button onClick={() => setIsGoogleApiModalOpen(false)} className="btn btn-outline h-12 text-sm font-bold">Cancel</button>
+                    </div>
+                    <button 
+                      onClick={() => fetchConfigFromBackend(true)}
+                      className="w-full flex items-center justify-center gap-2 text-xs font-bold text-sky-600 hover:text-sky-700 py-2 border border-sky-100 rounded-xl hover:bg-sky-50 transition-all"
+                    >
+                      <RefreshCw size={14} /> Tarik Pengaturan dari Server (Vercel/AI Studio)
+                    </button>
                   </div>
                 </div>
               </div>

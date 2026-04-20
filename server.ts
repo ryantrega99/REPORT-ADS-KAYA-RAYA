@@ -227,8 +227,16 @@ app.get("/api/health", (req, res) => {
 
 app.get("/api/config", (req, res) => {
   res.json({
-    googleClientId: process.env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '',
-    googleApiKey: process.env.VITE_GOOGLE_API_KEY || process.env.GOOGLE_API_KEY || ''
+    googleClientId: 
+      process.env.VITE_GOOGLE_CLIENT_ID || 
+      process.env.GOOGLE_CLIENT_ID || 
+      process.env.GADS_CLIENT_ID || 
+      process.env.CLIENT_ID || '',
+    googleApiKey: 
+      process.env.VITE_GOOGLE_API_KEY || 
+      process.env.GOOGLE_API_KEY || 
+      process.env.API_KEY || 
+      process.env.GOOGLE_SECRET || ''
   });
 });
 
