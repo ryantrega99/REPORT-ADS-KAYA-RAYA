@@ -554,15 +554,20 @@ export default function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  const signInGoogle = (pendingFn?: () => void) => {
+  const signInGoogle = async (pendingFn?: () => void) => {
+    // Try to fetch from backend one more time if empty
+    if (!googleClientId || !googleApiKey) {
+      await fetchConfigFromBackend();
+    }
+
     if (!googleClientId || !googleApiKey || googleClientId.includes('GANTI_DENGAN') || googleApiKey.includes('GANTI_DENGAN')) {
-      addToast('Google API belum dikonfigurasi. Silakan buka Setup API.', 'warn');
-      setIsGoogleApiModalOpen(true);
+      addToast('Google API Key/Client ID belum terdeteksi. Pastikan sudah mengisi Environment Variables di Vercel/AI Studio.', 'warn');
+      // HIDDEN: setIsGoogleApiModalOpen(true); 
       return;
     }
     if (gapiError) {
-      addToast(`Error API: ${gapiError}. Cek konfigurasi API Key.`, 'warn');
-      setIsGoogleApiModalOpen(true);
+      addToast(`Error Google API: ${gapiError}.`, 'warn');
+      // HIDDEN: setIsGoogleApiModalOpen(true);
       return;
     }
     if (!gapiReady) {
@@ -2627,6 +2632,8 @@ ${reportSections}`;
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
+          {/* HIDDEN GOOGLE API BUTTON PER USER REQUEST */}
+          {/* 
           <button 
             onClick={() => setIsGoogleApiModalOpen(true)}
             className="hidden md:flex items-center gap-2 px-4 py-2 bg-[var(--bg-surface)] border border-[var(--border-base)] rounded-xl hover:border-sky-300 hover:bg-sky-50/30 dark:hover:bg-sky-900/20 transition-all group"
@@ -2636,6 +2643,7 @@ ${reportSections}`;
             </div>
             <span className="text-xs font-bold text-[var(--text-muted)] group-hover:text-[var(--text-base)]">Google API</span>
           </button>
+          */}
           
           <div className="hidden sm:block h-8 w-[1px] bg-[var(--border-base)] mx-1 md:mx-2"></div>
 
@@ -2834,12 +2842,15 @@ ${reportSections}`;
                   <div className="lg:col-span-1 bento-card">
                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-6">Quick Actions</h3>
                     <div className="flex flex-col gap-3">
+                      {/* HIDDEN PER USER REQUEST */}
+                      {/*
                       <button 
                         onClick={() => setIsGoogleApiModalOpen(true)}
                         className="btn btn-primary w-full h-12 text-sm font-bold"
                       >
                         <Globe size={18} /> Google API Config
                       </button>
+                      */}
                       {currentUser.role !== 'admin' && (
                         <button 
                           onClick={() => { setActivePage('data'); setDataTab('ads'); }}
