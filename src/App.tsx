@@ -1138,12 +1138,14 @@ export default function App() {
     const now = () => new Date().toLocaleString('id-ID');
 
     // MENGGABUNGKAN DATA PER PRODUK JIKA KATEGORI ADS (PERMINTAAN USER)
+    // Catatan: Data sekarang sudah digabung di tingkat UI, tapi fungsi ini memastikan sinkronisasi ke spreadsheet 
+    // juga selalu memiliki format per-produk jika data dasar belum sempat digabung.
     let processedData = dataToSync;
     if (p === 'ads') {
       const aggregated: Record<string, any> = {};
       dataToSync.forEach(r => {
-        // Group by Date, Platform, and Product
-        const key = `${r.date_range}_${r.platform}_${r.product}`;
+        // Group by Date, Platform, Product, and User
+        const key = `${r.date_range}_${r.platform}_${r.product}_${r.user_name}`;
         if (!aggregated[key]) {
           aggregated[key] = { ...r, spend: 0, impressions: 0, clicks: 0, leads: 0 };
         }
@@ -1995,11 +1997,38 @@ export default function App() {
         }
       }
 
-      setAdsRawData(allProcessed);
-      addToast(`Berhasil mengambil total ${allProcessed.length} data harian`);
+      const aggregated: Record<string, any> = {};
+      allProcessed.forEach((item: any) => {
+        // Gabungkan berdasarkan Tanggal, Platform, Produk, dan User
+        const key = `${item.date_range}_${item.platform}_${item.product}_${item.user_name}`;
+        
+        if (!aggregated[key]) {
+          aggregated[key] = {
+            ...item,
+            campaign_name: `${item.product} (Aggregated)`,
+            id: `agg_${key.replace(/[^a-zA-Z0-9]/g, '_')}`
+          };
+        } else {
+          aggregated[key].spend += item.spend;
+          aggregated[key].impressions += item.impressions;
+          aggregated[key].clicks += item.clicks;
+          aggregated[key].leads += item.leads;
+          // Rekalkulasi CPR & CTR untuk agregat
+          aggregated[key].ctr = aggregated[key].impressions > 0 
+            ? ((aggregated[key].clicks / aggregated[key].impressions) * 100).toFixed(2) + '%' 
+            : '0.00%';
+          aggregated[key].cpr = aggregated[key].leads > 0 
+            ? aggregated[key].spend / aggregated[key].leads 
+            : 0;
+        }
+      });
+
+      const finalData = Object.values(aggregated);
+      setAdsRawData(finalData);
+      addToast(`Berhasil mengambil & menggabungkan total ${finalData.length} produk`);
       
       // Auto import to WA menu
-      await importAdsToApp(allProcessed);
+      await importAdsToApp(finalData);
     } catch (err: any) {
       addToast('Gagal: ' + err.message, 'warn');
     } finally {
