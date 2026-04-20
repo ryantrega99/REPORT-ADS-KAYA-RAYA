@@ -848,6 +848,31 @@ export default function App() {
   }, [googleClientId, googleApiKey]);
 
   useEffect(() => {
+    const fetchConfigFromBackend = async () => {
+      try {
+        const res = await fetch('/api/config');
+        if (!res.ok) return;
+        const config = await res.json();
+        
+        const isDefaultId = googleClientId.includes('GANTI_DENGAN') || !googleClientId;
+        const isDefaultKey = googleApiKey.includes('GANTI_DENGAN') || !googleApiKey;
+
+        if (config.googleClientId && isDefaultId) {
+          setGoogleClientId(config.googleClientId);
+          localStorage.setItem('kayaraya_google_client_id', config.googleClientId);
+        }
+        if (config.googleApiKey && isDefaultKey) {
+          setGoogleApiKey(config.googleApiKey);
+          localStorage.setItem('kayaraya_google_api_key', config.googleApiKey);
+        }
+      } catch (err) {
+        console.error("Failed to fetch Google API config from server:", err);
+      }
+    };
+    fetchConfigFromBackend();
+  }, []);
+
+  useEffect(() => {
     initGoogleApis();
   }, [initGoogleApis]);
 
