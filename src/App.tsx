@@ -1525,14 +1525,43 @@ export default function App() {
     }
   };
 
+  const discoverProduct = (name: string, available: string[]) => {
+    const cn = name.toLowerCase();
+
+    // Custom Aliases based on user request (junior -> MrBob Juniors, academia/ielts -> Academic)
+    if (cn.includes('junior')) {
+      const m = available.find(p => p.toLowerCase().includes('junior'));
+      if (m) return m;
+    }
+    if (cn.includes('academia') || cn.includes('academic') || cn.includes('ielts')) {
+      const m = available.find(p => p.toLowerCase().includes('academic') || p.toLowerCase().includes('academia'));
+      if (m) return m;
+    }
+
+    // Exact match first
+    let match = available.find(p => cn.includes(p.toLowerCase()));
+    if (match) return match;
+    
+    // Match by core keyword (removing common prefixes)
+    match = available.find(p => {
+      const core = p.replace(/^(LKBI|Kelas Online|4 Buku|Paket)\s+/i, '').trim();
+      return core.length > 2 && cn.includes(core.toLowerCase());
+    });
+    if (match) return match;
+
+    return 'Umum';
+  };
+
   const runDailyAutomation = async () => {
     if (!currentUser || currentUser.role === 'admin') return;
 
     const fbTokenTrimmed = fbToken.trim();
+    const ttTokenTrimmed = ttToken.trim();
     const fbActiveIds = fbAdvertisers.filter(id => id.trim() !== '');
     const gadsActiveIds = gadsAdvertisers.filter(id => id.trim() !== '');
+    const ttActiveIds = ttAdvertisers.filter(id => id.trim() !== '');
 
-    if ((!fbTokenTrimmed || fbActiveIds.length === 0) && gadsActiveIds.length === 0) {
+    if ((!fbTokenTrimmed || fbActiveIds.length === 0) && gadsActiveIds.length === 0 && (!ttTokenTrimmed || ttActiveIds.length === 0)) {
       logActivity('automation_failed', 'Missing API credentials');
       addToast('Auto-Fetch gagal: Kredensial API belum lengkap', 'warn');
       return;
@@ -1554,7 +1583,12 @@ export default function App() {
     let allProcessed: any[] = [];
     let fbSuccess = 0;
     let gadsSuccess = 0;
+    let ttSuccess = 0;
     let errors: string[] = [];
+
+    const effectiveProducts = (currentUser?.assignedProducts && currentUser.assignedProducts.length > 0) 
+      ? currentUser.assignedProducts 
+      : PRODUCTS;
 
     // 1. Fetch FB
     if (fbTokenTrimmed && fbActiveIds.length > 0) {
@@ -1577,18 +1611,20 @@ export default function App() {
           if (!result.ok) throw new Error(result.error);
           
           (result.data || []).forEach((c: any) => {
+            const detectedProduct = discoverProduct(c.campaign_name, effectiveProducts);
             allProcessed.push({
-              id: c.campaign_id,
+              id: `fb_${c.campaign_id}_${c.date_start}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
               name: c.campaign_name,
+              campaign_name: c.campaign_name,
               spend: parseFloat(c.spend || '0'),
-              impressions: c.impressions || '0',
-              clicks: c.clicks || '0',
+              impressions: parseInt(c.impressions) || 0,
+              clicks: parseInt(c.clicks) || 0,
               leads: 0,
               platform: 'Meta',
               timestamp: nowStr,
-              date_range: dateRangeStr,
+              date_range: c.date_start,
               user_name: currentUser.name,
-              product: 'all',
+              product: detectedProduct,
             });
           });
           fbSuccess++;
@@ -1609,8 +1645,8 @@ export default function App() {
             body: JSON.stringify({
               customerId: cid,
               dateRange: 'CUSTOM',
-              startDate: startStr,
-              endDate: endStr,
+              startDate: startStr.replace(/-/g, ''),
+              endDate: endStr.replace(/-/g, ''),
               gadsRefreshToken: gadsRefreshToken.trim(),
               gadsManagerId: gadsManagerId.trim()
             })
@@ -1618,19 +1654,21 @@ export default function App() {
           const result = await res.json();
           if (!result.ok) throw new Error(result.error);
 
-          (result.data || []).forEach((c: any) => {
+          (result.campaigns || []).forEach((c: any) => {
+            const detectedProduct = discoverProduct(c.name, effectiveProducts);
             allProcessed.push({
-              id: c.campaign.id,
-              name: c.campaign.name,
-              spend: (c.metrics.costMicros || 0) / 1000000,
-              impressions: c.metrics.impressions || '0',
-              clicks: c.metrics.clicks || '0',
-              leads: c.metrics.conversions || 0,
+              id: `ga_${c.id}_${c.tanggal}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+              name: c.name,
+              campaign_name: c.name,
+              spend: parseFloat(c.spend) || 0,
+              impressions: parseInt(c.impressions) || 0,
+              clicks: parseInt(c.clicks) || 0,
+              leads: Math.round(parseFloat(c.conversions) || 0),
               platform: 'Google',
               timestamp: nowStr,
-              date_range: dateRangeStr,
+              date_range: c.tanggal,
               user_name: currentUser.name,
-              product: 'all',
+              product: detectedProduct,
             });
           });
           gadsSuccess++;
@@ -1640,13 +1678,73 @@ export default function App() {
       }
     }
 
-    setAdsRawData(allProcessed);
+    // 3. Fetch TikTok
+    if (ttTokenTrimmed && ttActiveIds.length > 0) {
+      for (const id of ttActiveIds) {
+        try {
+          const res = await fetch('/api/tiktok-ads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              advertiserId: id.trim(),
+              token: ttTokenTrimmed,
+              datePreset: 'custom',
+              startDate: startStr,
+              endDate: endStr
+            })
+          });
+          const result = await res.json();
+          if (!result.ok) throw new Error(result.error);
 
-    // 3. Auto Sync
+          (result.data || []).forEach((c: any) => {
+            const detectedProduct = discoverProduct(c.dimensions.campaign_name, effectiveProducts);
+            allProcessed.push({
+              id: `tt_${c.dimensions.campaign_id}_${c.dimensions.stat_time_day.split(' ')[0]}_${Date.now()}`,
+              platform: 'TikTok',
+              campaign_name: c.dimensions.campaign_name,
+              spend: parseFloat(c.metrics.spend) || 0,
+              impressions: parseInt(c.metrics.impressions) || 0,
+              clicks: parseInt(c.metrics.clicks) || 0,
+              leads: parseInt(c.metrics.conversion) || 0,
+              timestamp: nowStr,
+              date_range: c.dimensions.stat_time_day.split(' ')[0],
+              user_name: currentUser.name,
+              product: detectedProduct,
+            });
+          });
+          ttSuccess++;
+        } catch (e: any) {
+          errors.push(`TikTok (${id}): ${e.message}`);
+        }
+      }
+    }
+
+    // AGGREGATION FOR AUTOMATION
+    const aggregated: Record<string, any> = {};
+    allProcessed.forEach((item: any) => {
+      const key = `${item.date_range}_${item.platform}_${item.product}_${item.user_name}`;
+      if (!aggregated[key]) {
+        aggregated[key] = {
+          ...item,
+          campaign_name: `${item.product} (Aggregated)`,
+          id: `agg_auto_${key.replace(/[^a-zA-Z0-9]/g, '_')}`
+        };
+      } else {
+        aggregated[key].spend += item.spend;
+        aggregated[key].impressions += item.impressions;
+        aggregated[key].clicks += item.clicks;
+        aggregated[key].leads += item.leads;
+      }
+    });
+    const finalData = Object.values(aggregated);
+
+    setAdsRawData(finalData);
+
+    // 4. Auto Sync
     let syncStatus = 'Skipped (No Google Sheets connected)';
     if (googleAccessToken && sheetIds.ads) {
       try {
-        await doSync('ads', allProcessed, true);
+        await doSync('ads', finalData, true);
         syncStatus = 'Success';
       } catch (e: any) {
         syncStatus = `Failed: ${e.message}`;
@@ -1656,11 +1754,11 @@ export default function App() {
       errors.push('Google Sheets tidak terhubung');
     }
 
-    // 4. Log & Summary
-    const summary = `Auto-Fetch Selesai. Meta: ${fbSuccess} akun, Google: ${gadsSuccess} akun. Total Data: ${allProcessed.length}. Sync: ${syncStatus}.`;
+    // 5. Log & Summary
+    const summary = `Auto-Fetch Selesai. Meta: ${fbSuccess}, Google: ${gadsSuccess}, TikTok: ${ttSuccess}. Total Produk: ${finalData.length}. Sync: ${syncStatus}.`;
     logActivity('automation_complete', summary + (errors.length > 0 ? ` Errors: ${errors.join(', ')}` : ''));
     
-    addToast(`Automasi Selesai! Total data: ${allProcessed.length}`, errors.length > 0 ? 'warn' : 'success');
+    addToast(`Automasi Selesai! ${finalData.length} produk di-aggregrasi.`, errors.length > 0 ? 'warn' : 'success');
   };
 
   useEffect(() => {
@@ -1764,34 +1862,7 @@ export default function App() {
         ? targetUser.assignedProducts 
         : PRODUCTS;
 
-      const discoverProduct = (name: string, available: string[]) => {
-        const cn = name.toLowerCase();
-
-        // Custom Aliases based on user request (junior -> MrBob Juniors, academia/ielts -> Academic)
-        if (cn.includes('junior')) {
-          const m = available.find(p => p.toLowerCase().includes('junior'));
-          if (m) return m;
-        }
-        if (cn.includes('academia') || cn.includes('academic') || cn.includes('ielts')) {
-          const m = available.find(p => p.toLowerCase().includes('academic') || p.toLowerCase().includes('academia'));
-          if (m) return m;
-        }
-
-        // Exact match first
-        let match = available.find(p => cn.includes(p.toLowerCase()));
-        if (match) return match;
-        
-        // Match by core keyword (removing common prefixes)
-        match = available.find(p => {
-          const core = p.replace(/^(LKBI|Kelas Online|4 Buku|Paket)\s+/i, '').trim();
-          return core.length > 2 && cn.includes(core.toLowerCase());
-        });
-        if (match) return match;
-
-        return 'Umum';
-      };
-
-      // Fetch Facebook Ads
+      // Facebook Fetching...
       if (fbTokenTrimmed && fbActiveIds.length > 0) {
         const fbByDate: Record<string, { spend: number, impressions: number, clicks: number, leads: number }> = {};
 
