@@ -65,8 +65,8 @@ import {
 
 // --- Constants ---
 const GOOGLE_CONFIG = {
-  CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'GANTI_DENGAN_CLIENT_ID.apps.googleusercontent.com',
-  API_KEY: import.meta.env.VITE_GOOGLE_API_KEY || 'GANTI_DENGAN_API_KEY',
+  CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+  API_KEY: import.meta.env.VITE_GOOGLE_API_KEY || '',
   SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
   DISCOVERY: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
 };
@@ -555,7 +555,7 @@ export default function App() {
   }, []);
 
   const signInGoogle = (pendingFn?: () => void) => {
-    if (googleClientId.includes('GANTI_DENGAN') || googleApiKey.includes('GANTI_DENGAN')) {
+    if (!googleClientId || !googleApiKey || googleClientId.includes('GANTI_DENGAN') || googleApiKey.includes('GANTI_DENGAN')) {
       addToast('Google API belum dikonfigurasi. Silakan buka Setup API.', 'warn');
       setIsGoogleApiModalOpen(true);
       return;
@@ -803,12 +803,20 @@ export default function App() {
   const [manualUser, setManualUser] = useState('');
 
   // Google API Config State
-  const [googleClientId, setGoogleClientId] = useState(localStorage.getItem('kayaraya_google_client_id') || GOOGLE_CONFIG.CLIENT_ID);
-  const [googleApiKey, setGoogleApiKey] = useState(localStorage.getItem('kayaraya_google_api_key') || GOOGLE_CONFIG.API_KEY);
+  const [googleClientId, setGoogleClientId] = useState(() => {
+    const stored = localStorage.getItem('kayaraya_google_client_id');
+    if (stored && !stored.includes('GANTI_DENGAN')) return stored;
+    return GOOGLE_CONFIG.CLIENT_ID || '';
+  });
+  const [googleApiKey, setGoogleApiKey] = useState(() => {
+    const stored = localStorage.getItem('kayaraya_google_api_key');
+    if (stored && !stored.includes('GANTI_DENGAN')) return stored;
+    return GOOGLE_CONFIG.API_KEY || '';
+  });
 
   // Google API Initialization
   const initGoogleApis = useCallback(() => {
-    if (googleClientId.includes('GANTI_DENGAN') || googleApiKey.includes('GANTI_DENGAN')) {
+    if (!googleClientId || !googleApiKey || googleClientId.includes('GANTI_DENGAN') || googleApiKey.includes('GANTI_DENGAN')) {
       allLog('Google API belum dikonfigurasi. Silakan buka Setup API.', 'warn');
       return;
     }
