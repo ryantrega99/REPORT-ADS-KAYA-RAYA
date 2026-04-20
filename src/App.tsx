@@ -1696,6 +1696,17 @@ export default function App() {
 
       const discoverProduct = (name: string, available: string[]) => {
         const cn = name.toLowerCase();
+
+        // Custom Aliases based on user request (junior -> MrBob Juniors, academia/ielts -> Academic)
+        if (cn.includes('junior')) {
+          const m = available.find(p => p.toLowerCase().includes('junior'));
+          if (m) return m;
+        }
+        if (cn.includes('academia') || cn.includes('academic') || cn.includes('ielts')) {
+          const m = available.find(p => p.toLowerCase().includes('academic') || p.toLowerCase().includes('academia'));
+          if (m) return m;
+        }
+
         // Exact match first
         let match = available.find(p => cn.includes(p.toLowerCase()));
         if (match) return match;
