@@ -1137,6 +1137,24 @@ export default function App() {
     const activeCols = exportCols[p];
     const now = () => new Date().toLocaleString('id-ID');
 
+    // MENGGABUNGKAN DATA PER PRODUK JIKA KATEGORI ADS (PERMINTAAN USER)
+    let processedData = dataToSync;
+    if (p === 'ads') {
+      const aggregated: Record<string, any> = {};
+      dataToSync.forEach(r => {
+        // Group by Date, Platform, and Product
+        const key = `${r.date_range}_${r.platform}_${r.product}`;
+        if (!aggregated[key]) {
+          aggregated[key] = { ...r, spend: 0, impressions: 0, clicks: 0, leads: 0 };
+        }
+        aggregated[key].spend += (r.spend || 0);
+        aggregated[key].impressions += (parseInt(r.impressions) || 0);
+        aggregated[key].clicks += (parseInt(r.clicks) || 0);
+        aggregated[key].leads += (r.leads || 0);
+      });
+      processedData = Object.values(aggregated);
+    }
+
     const colExtractors: Record<string, Record<string, (r: any) => any>> = {
       ads: {
         'Tanggal Fetch': r => r.timestamp,
@@ -1145,10 +1163,10 @@ export default function App() {
         'Platform': r => r.platform,
         'Product': r => r.product || '–',
         'Spend': r => r.spend || 0,
-        'Impressions': r => parseInt(r.impressions) || 0, 
-        'Clicks': r => parseInt(r.clicks) || 0,
+        'Impressions': r => r.impressions || 0, 
+        'Clicks': r => r.clicks || 0,
         'Leads': r => r.leads || 0, 
-        'CPR': r => Math.round(r.cpr || 0),
+        'CPR': r => r.leads > 0 ? Math.round(r.spend / r.leads) : 0,
       },
       ca: {
         'Tanggal Fetch': () => now(), 
@@ -1166,7 +1184,7 @@ export default function App() {
 
     const ex = colExtractors[p];
     const values = [activeCols];
-    dataToSync.forEach(r => values.push(activeCols.map(col => ex[col] ? ex[col](r) : '')));
+    processedData.forEach(r => values.push(activeCols.map(col => ex[col] ? ex[col](r) : '')));
 
     try {
       const range = `'${tabName}'!A1`;
