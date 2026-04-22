@@ -4213,8 +4213,25 @@ ${reportSections}`;
                     </div>
                     <div className="space-y-5">
                       <div>
-                        <label className="label">Access Token</label>
+                        <div className="flex items-center justify-between">
+                          <label className="label">Access Token</label>
+                          <a 
+                            href="https://developers.facebook.com/tools/explorer/" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
+                          >
+                            <ExternalLink size={12} /> Tutorial Generate
+                          </a>
+                        </div>
                         <input className="input h-11" type="password" value={fbToken} onChange={(e) => setFbToken(e.target.value)} placeholder="EAABxxxx..." />
+                        <p className="text-[9px] text-[var(--text-muted)] mt-1 italic leading-relaxed">
+                          <b>Cara Generate:</b><br/>
+                          1. Klik link di atas & login ke Meta Developer.<br/>
+                          2. Pilih Meta App Anda di dropdown kanan atas.<br/>
+                          3. Tambahkan permission: <b>ads_read</b>, <b>ads_management</b>.<br/>
+                          4. Klik "Generate Access Token" & copy hasilnya ke sini.
+                        </p>
                       </div>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Ad Account IDs</h4>
