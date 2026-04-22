@@ -731,7 +731,7 @@ export default function App() {
   // Setup State
   const [fbToken, setFbToken] = useState(localStorage.getItem('kayaraya_fb_token') || '');
   const [gadsRefreshToken, setGadsRefreshToken] = useState(localStorage.getItem('kayaraya_gads_refresh_token') || '');
-  const [gadsManagerId, setGadsManagerId] = useState(localStorage.getItem('kayaraya_gads_manager_id') || '');
+  const [gadsManagerId, setGadsManagerId] = useState(localStorage.getItem('kayaraya_gads_manager_id') || '934-786-8568');
   const [ttToken, setTtToken] = useState(localStorage.getItem('kayaraya_tt_token') || '');
   const [fbAdvertisers, setFbAdvertisers] = useState<string[]>(() => {
     const saved = localStorage.getItem('kayaraya_fb_advertisers_v2');
@@ -881,17 +881,44 @@ export default function App() {
         updated = true;
       }
 
+      // Sync other tokens if empty
+      if (config.fbAccessToken && !fbToken) {
+        setFbToken(config.fbAccessToken);
+        localStorage.setItem('kayaraya_fb_token', config.fbAccessToken);
+        updated = true;
+      }
+      if (config.gadsRefreshToken && !gadsRefreshToken) {
+        setGadsRefreshToken(config.gadsRefreshToken);
+        localStorage.setItem('kayaraya_gads_refresh_token', config.gadsRefreshToken);
+        updated = true;
+      }
+      if (config.gadsManagerId && (gadsManagerId === '934-786-8568' || !gadsManagerId)) {
+        setGadsManagerId(config.gadsManagerId);
+        localStorage.setItem('kayaraya_gads_manager_id', config.gadsManagerId);
+        updated = true;
+      }
+      if (config.ttAccessToken && !ttToken) {
+        setTtToken(config.ttAccessToken);
+        localStorage.setItem('kayaraya_tt_token', config.ttAccessToken);
+        updated = true;
+      }
+      if (config.waToken && !waToken) {
+        setWaToken(config.waToken);
+        localStorage.setItem('kayaraya_wa_token', config.waToken);
+        updated = true;
+      }
+
       if (updated) {
-        if (showToast) addToast('Kredensial Google API berhasil ditarik dari server!', 'success');
+        if (showToast) addToast('Konfigurasi sistem berhasil ditarik dari server!', 'success');
         initGoogleApis();
       } else if (showToast) {
-        addToast('Tidak ada kredensial baru ditemukan di server.', 'info');
+        addToast('Konfigurasi sistem sudah up-to-date.', 'info');
       }
     } catch (err) {
-      console.error("Failed to fetch Google API config from server:", err);
+      console.error("Failed to fetch config from server:", err);
       if (showToast) addToast('Gagal menghubungi server.', 'warn');
     }
-  }, [googleClientId, googleApiKey, initGoogleApis]);
+  }, [googleClientId, googleApiKey, fbToken, gadsRefreshToken, gadsManagerId, ttToken, waToken, initGoogleApis]);
 
   useEffect(() => {
     fetchConfigFromBackend();
@@ -968,6 +995,22 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Sync state from currentUser profile if logged in
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.fbToken && !fbToken) setFbToken(currentUser.fbToken);
+      if (currentUser.gadsRefreshToken && !gadsRefreshToken) setGadsRefreshToken(currentUser.gadsRefreshToken);
+      if (currentUser.gadsManagerId && !gadsManagerId) setGadsManagerId(currentUser.gadsManagerId);
+      if (currentUser.ttToken && !ttToken) setTtToken(currentUser.ttToken);
+      if (currentUser.waToken && !waToken) setWaToken(currentUser.waToken);
+      if (currentUser.waTarget && !waTarget) setWaTarget(currentUser.waTarget);
+      if (currentUser.fbAdvertisers && fbAdvertisers.length === 0) setFbAdvertisers(currentUser.fbAdvertisers);
+      if (currentUser.gadsAdvertisers && gadsAdvertisers.length === 0) setGadsAdvertisers(currentUser.gadsAdvertisers);
+      if (currentUser.ttAdvertisers && ttAdvertisers.length === 0) setTtAdvertisers(currentUser.ttAdvertisers);
+      if (currentUser.sheetIds) setSheetIds(currentUser.sheetIds);
+    }
+  }, [currentUser]);
 
   // Safety timeout for Auth Ready
   useEffect(() => {
@@ -4212,13 +4255,8 @@ ${reportSections}`;
                     </div>
                     <div className="space-y-5">
                       <div>
-                        <label className="label">Refresh Token (Optional per User)</label>
-                        <input className="input h-11" type="password" value={gadsRefreshToken} onChange={(e) => setGadsRefreshToken(e.target.value)} placeholder="1//0xxxx..." />
-                        <p className="text-[9px] text-[var(--text-muted)] mt-1 italic">Kosongkan jika ingin menggunakan token global dari Admin.</p>
-                      </div>
-                      <div>
                         <label className="label">Manager Customer ID (Optional per User)</label>
-                        <input className="input h-11" value={gadsManagerId} onChange={(e) => setGadsManagerId(e.target.value)} placeholder="318-863-1056" />
+                        <input className="input h-11" value={gadsManagerId} onChange={(e) => setGadsManagerId(e.target.value)} placeholder="934-786-8568" />
                         <p className="text-[9px] text-[var(--text-muted)] mt-1 italic">Wajib jika Customer ID di bawah adalah Client Account (bukan Manager langsung).</p>
                       </div>
                       <div className="flex items-center justify-between mb-3">
@@ -4246,7 +4284,7 @@ ${reportSections}`;
                       </div>
                       <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
                         <p className="text-[11px] text-red-700 font-medium leading-relaxed">
-                          <b>Penting:</b> Pastikan Anda telah memasukkan <b>GADS_CLIENT_ID</b>, <b>GADS_CLIENT_SECRET</b>, dan <b>GADS_REFRESH_TOKEN</b> di panel <b>Secrets</b> AI Studio agar koneksi ini dapat berfungsi.
+                          <b>Penting:</b> Pastikan <b>GADS_CLIENT_ID</b> dan <b>GADS_CLIENT_SECRET</b> sudah terkonfigurasi di sistem agar koneksi API dapat berfungsi dengan baik.
                         </p>
                       </div>
                       <button onClick={() => {

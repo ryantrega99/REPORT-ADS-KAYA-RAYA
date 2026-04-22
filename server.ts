@@ -236,7 +236,12 @@ app.get("/api/config", (req, res) => {
       process.env.VITE_GOOGLE_API_KEY || 
       process.env.GOOGLE_API_KEY || 
       process.env.API_KEY || 
-      process.env.GOOGLE_SECRET || ''
+      process.env.GOOGLE_SECRET || '',
+    fbAccessToken: process.env.FB_ACCESS_TOKEN || 'EAAXErzbarUgBRY8O11MpEs8Pe7FV8Eb5eoMkDk2JX85XJWuZAOEZA7uu5dmhhir7vBQFfdkpDLuaSRIt3Uo44CyAfdXYNln0cZBiqROFaDZBzPlXALSYXp5EoQLvFZCaLwmGcQbqoLUPP24kQED9oRLVbnIsYaG9owWEyGZAXSNnyQBPX5UEZB8C7YUZBgfz4ILgu2CctDzZAOqHX',
+    gadsRefreshToken: process.env.GADS_REFRESH_TOKEN || '',
+    gadsManagerId: process.env.GADS_MCC_ID || '',
+    ttAccessToken: process.env.TIKTOK_ACCESS_TOKEN || '',
+    waToken: process.env.WA_TOKEN || ''
   });
 });
 
@@ -577,11 +582,16 @@ app.post("/api/platforms/delete", async (req, res) => {
   app.post("/api/fb-ads", async (req, res) => {
     try {
       const { accountId, token, datePreset, startDate, endDate } = req.body;
+      const fbToken = token || process.env.FB_ACCESS_TOKEN;
+
+      if (!fbToken) {
+        return res.status(400).json({ ok: false, error: "Facebook Access Token is missing (not provided by user and not set on server)" });
+      }
       
       const params: any = {
         level: 'campaign',
         fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,actions,date_start',
-        access_token: token,
+        access_token: fbToken,
         time_increment: '1',
         limit: '500'
       };
