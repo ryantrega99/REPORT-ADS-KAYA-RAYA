@@ -2436,14 +2436,16 @@ export default function App() {
       const platformStats: Record<string, { spend: number, product: string }> = {};
       
       camps.forEach(c => {
-        const platformName = c.platform === 'fb' ? 'Facebook' : 'Google';
+        const platformName = c.platform === 'fb' ? 'Facebook' : (c.platform === 'google' ? 'Google' : 'TikTok');
         const key = `${platformName} ${c.product}`;
-        if (!platformStats[key]) platformStats[key] = { spend: 0, product: c.product };
+        if (!platformStats[key]) platformStats[key] = { spend: 0, clicks: 0, leads: 0, product: c.product };
         platformStats[key].spend += c.spend;
+        platformStats[key].clicks += (c.clicks || 0);
+        platformStats[key].leads += (c.leads || 0);
       });
 
       const lines = Object.entries(platformStats)
-        .map(([key, stats]) => `=> ${key} = Rp ${fmtNum(Math.round(stats.spend))}`)
+        .map(([key, stats]) => `=> ${key} = Rp ${fmtNum(Math.round(stats.spend))} | ${stats.clicks} Clicks | ${stats.leads} Leads`)
         .join('\n');
 
       return `Spent Iklan ${date}\n${lines}`;
@@ -3004,8 +3006,9 @@ ${reportSections}`;
                             {currentUser.role === 'admin' && <th className="pb-2 font-bold text-[11px] uppercase tracking-wider text-[var(--text-muted)]">User</th>}
                             <th className="pb-2 font-bold text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Kampanye</th>
                             <th className="pb-2 font-bold text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Platform</th>
-                            <th className="pb-2 font-bold text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Spend</th>
-                            <th className="pb-2 font-bold text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Leads</th>
+                            <th className="pb-2 font-bold text-[11px] uppercase tracking-wider text-[var(--text-muted)] text-right">Spend</th>
+                            <th className="pb-2 font-bold text-[11px] uppercase tracking-wider text-[var(--text-muted)] text-right">Clicks</th>
+                            <th className="pb-2 font-bold text-[11px] uppercase tracking-wider text-[var(--text-muted)] text-right">Leads</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3028,8 +3031,9 @@ ${reportSections}`;
                                   {c.platform === 'fb' ? 'FB Ads' : 'Google'}
                                 </span>
                               </td>
-                              <td className="py-3 font-mono text-xs text-[var(--text-base)]">Rp {fmtNum(c.spend)}</td>
-                              <td className="py-3 font-mono text-xs text-[var(--text-base)]">{c.leads}</td>
+                              <td className="py-3 font-mono text-xs text-[var(--text-base)] text-right">Rp {fmtNum(c.spend)}</td>
+                              <td className="py-3 font-mono text-xs text-[var(--text-base)] text-right">{fmtNum(c.clicks || 0)}</td>
+                              <td className="py-3 font-mono text-xs text-[var(--text-base)] text-right">{c.leads}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -3662,6 +3666,42 @@ ${reportSections}`;
                         </button>
                       </div>
                     </div>
+
+                    {/* Summary Totals for Fetch Results */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                      {(() => {
+                        const filtered = adsRawData.filter(c => {
+                          const matchesSearch = !adsResultSearch || (c.product + c.date_range + c.user_name).toLowerCase().includes(adsResultSearch.toLowerCase());
+                          const matchesPlatform = adsResultFilterPlatform === 'all' || c.platform === adsResultFilterPlatform;
+                          const matchesProduct = adsResultFilterProduct === 'all' || c.product === adsResultFilterProduct;
+                          const matchesUser = adsResultFilterUser === 'all' || c.user_name === adsResultFilterUser;
+                          return matchesSearch && matchesPlatform && matchesProduct && matchesUser;
+                        });
+                        const s = filtered.reduce((acc, c) => acc + (c.spend || 0), 0);
+                        const cl = filtered.reduce((acc, c) => acc + (parseInt(c.clicks) || 0), 0);
+                        const l = filtered.reduce((acc, c) => acc + (c.leads || 0), 0);
+                        return (
+                          <>
+                            <div className="bento-card p-4 bg-blue-50/50 border-blue-100/50">
+                              <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-1 leading-none">Filtered Spend</p>
+                              <p className="text-sm font-black text-blue-700">Rp {fmtNum(s)}</p>
+                            </div>
+                            <div className="bento-card p-4 bg-indigo-50/50 border-indigo-100/50">
+                              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1 leading-none">Filtered Clicks</p>
+                              <p className="text-sm font-black text-indigo-700">{fmtNum(cl)}</p>
+                            </div>
+                            <div className="bento-card p-4 bg-amber-50/50 border-amber-100/50">
+                              <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1 leading-none">Filtered Leads</p>
+                              <p className="text-sm font-black text-amber-700">{fmtNum(l)}</p>
+                            </div>
+                            <div className="bento-card p-4 bg-emerald-50/50 border-emerald-100/50">
+                              <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1 leading-none">Filtered CPR</p>
+                              <p className="text-sm font-black text-emerald-700">Rp {fmtNum(l > 0 ? Math.round(s / l) : 0)}</p>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                       {adsRawData
                         .filter(c => {
@@ -3710,27 +3750,35 @@ ${reportSections}`;
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3">
-                              <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.15em] mb-1">Spend</p>
-                              <p className="font-mono font-bold text-blue-700 text-sm">Rp {fmtNum(c.spend)}</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-2">
+                              <p className="text-[8px] font-black text-blue-400 uppercase tracking-[0.1em] mb-0.5">Spend</p>
+                              <p className="font-mono font-bold text-blue-700 text-[10px]">Rp {fmtNum(c.spend)}</p>
                             </div>
-                            <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-3">
-                              <p className="text-[9px] font-black text-amber-500 uppercase tracking-[0.15em] mb-1">Leads</p>
+                            <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2">
+                              <p className="text-[8px] font-black text-amber-500 uppercase tracking-[0.1em] mb-0.5">Leads</p>
                               <input 
                                 type="number" 
-                                className="w-full bg-transparent border-none font-mono font-black text-amber-700 text-sm outline-none focus:ring-0 p-0"
+                                className="w-full bg-transparent border-none font-mono font-black text-amber-700 text-[10px] outline-none focus:ring-0 p-0"
                                 value={c.leads}
                                 onChange={(e) => handleEditLeads(c.id, e.target.value)}
                               />
                             </div>
-                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3">
-                              <p className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.15em] mb-1">CPR</p>
-                              <p className="font-mono font-black text-emerald-600 text-sm">Rp {fmtNum(Math.round(c.cpr || 0))}</p>
+                            <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-2">
+                              <p className="text-[8px] font-black text-indigo-500 uppercase tracking-[0.1em] mb-0.5">Clicks</p>
+                              <p className="font-mono font-bold text-indigo-700 text-[10px]">{fmtNum(parseInt(c.clicks))}</p>
                             </div>
-                            <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-3">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Impr</p>
-                              <p className="font-mono font-bold text-slate-700 text-sm">{fmtNum(parseInt(c.impressions))}</p>
+                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-2">
+                              <p className="text-[8px] font-black text-emerald-500 uppercase tracking-[0.1em] mb-0.5">CPR</p>
+                              <p className="font-mono font-black text-emerald-600 text-[10px]">Rp {fmtNum(Math.round(c.cpr || 0))}</p>
+                            </div>
+                            <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-2">
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em] mb-0.5">Impr</p>
+                              <p className="font-mono font-bold text-slate-700 text-[10px]">{fmtNum(parseInt(c.impressions))}</p>
+                            </div>
+                            <div className="bg-violet-50/50 border border-violet-100 rounded-xl p-2">
+                              <p className="text-[8px] font-black text-violet-400 uppercase tracking-[0.1em] mb-0.5">CTR</p>
+                              <p className="font-mono font-bold text-violet-700 text-[10px]">{c.ctr || '0%'}</p>
                             </div>
                           </div>
                           
