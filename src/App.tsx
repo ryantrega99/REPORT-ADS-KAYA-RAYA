@@ -153,7 +153,13 @@ const SyncPanel = ({
   exportCols: string[],
   onToggleColumn: (col: string) => void
 }) => {
-  const [urlInput, setUrlInput] = useState('');
+  const [urlInput, setUrlInput] = useState(sheetId || '');
+
+  useEffect(() => {
+    if (sheetId && !urlInput) {
+      setUrlInput(sheetId);
+    }
+  }, [sheetId]);
 
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-base)] rounded-2xl shadow-sm overflow-hidden mb-8">
@@ -400,9 +406,12 @@ export default function App() {
   // Google API State
   const [gapiReady, setGapiReady] = useState(false);
   const [gapiError, setGapiError] = useState<string | null>(null);
-  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
-  const [googleTokenExpiry, setGoogleTokenExpiry] = useState(0);
-  const [googleUser, setGoogleUser] = useState<any>(null);
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(() => localStorage.getItem('kayaraya_google_token'));
+  const [googleTokenExpiry, setGoogleTokenExpiry] = useState(() => Number(localStorage.getItem('kayaraya_google_expiry') || '0'));
+  const [googleUser, setGoogleUser] = useState<any>(() => {
+    const saved = localStorage.getItem('kayaraya_google_user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [sheetIds, setSheetIds] = useState<Record<string, string>>({ ads: '', ca: '' });
   const [sheetTabs, setSheetTabs] = useState<Record<string, string>>({ ads: 'Ads Data', ca: 'Creative Assets' });
   const [connectedSheets, setConnectedSheets] = useState<Record<string, boolean>>({ ads: false, ca: false });
@@ -420,21 +429,18 @@ export default function App() {
   const pendingActionRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (currentUser && !fetchUser) {
-      setFetchUser(currentUser.name);
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
     if (currentUser) {
-      if (currentUser.fbToken) setFbToken(currentUser.fbToken);
-      if (currentUser.gadsRefreshToken) setGadsRefreshToken(currentUser.gadsRefreshToken);
-      if (currentUser.ttToken) setTtToken(currentUser.ttToken);
-      if (currentUser.waToken) setWaToken(currentUser.waToken);
-      if (currentUser.waTarget) setWaTarget(currentUser.waTarget);
-      if (currentUser.fbAdvertisers && currentUser.fbAdvertisers.length > 0) setFbAdvertisers(currentUser.fbAdvertisers);
-      if (currentUser.gadsAdvertisers && currentUser.gadsAdvertisers.length > 0) setGadsAdvertisers(currentUser.gadsAdvertisers);
-      if (currentUser.ttAdvertisers && currentUser.ttAdvertisers.length > 0) setTtAdvertisers(currentUser.ttAdvertisers);
+      if (currentUser.fbToken && !fbToken) setFbToken(currentUser.fbToken);
+      if (currentUser.gadsRefreshToken && !gadsRefreshToken) setGadsRefreshToken(currentUser.gadsRefreshToken);
+      if (currentUser.gadsManagerId && !gadsManagerId) setGadsManagerId(currentUser.gadsManagerId);
+      if (currentUser.ttToken && !ttToken) setTtToken(currentUser.ttToken);
+      if (currentUser.waToken && !waToken) setWaToken(currentUser.waToken);
+      if (currentUser.waTarget && !waTarget) setWaTarget(currentUser.waTarget);
+      if (currentUser.fbAdvertisers && fbAdvertisers.length === 0) setFbAdvertisers(currentUser.fbAdvertisers);
+      if (currentUser.gadsAdvertisers && gadsAdvertisers.length === 0) setGadsAdvertisers(currentUser.gadsAdvertisers);
+      if (currentUser.ttAdvertisers && ttAdvertisers.length === 0) setTtAdvertisers(currentUser.ttAdvertisers);
+      if (currentUser.sheetIds) setSheetIds(currentUser.sheetIds);
+      if (currentUser.name && !fetchUser) setFetchUser(currentUser.name);
     }
   }, [currentUser]);
 
@@ -498,7 +504,11 @@ export default function App() {
       if (event.data?.type === 'GOOGLE_OAUTH_SUCCESS') {
         const { access_token, expires_in } = event.data.payload;
         setGoogleAccessToken(access_token);
-        setGoogleTokenExpiry(Date.now() + (expires_in - 60) * 1000);
+        const expiry = Date.now() + (expires_in - 60) * 1000;
+        setGoogleTokenExpiry(expiry);
+        
+        localStorage.setItem('kayaraya_google_token', access_token);
+        localStorage.setItem('kayaraya_google_expiry', String(expiry));
         
         if ((window as any).gapi?.client) {
           (window as any).gapi.client.setToken({ access_token });
@@ -511,6 +521,7 @@ export default function App() {
           if (r.ok) {
             const user = await r.json();
             setGoogleUser(user);
+            localStorage.setItem('kayaraya_google_user', JSON.stringify(user));
             allLog('Login berhasil sebagai ' + user.email + '.', 'ok');
             addToast('Login Google berhasil!', 'success');
           }
@@ -996,21 +1007,8 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Sync state from currentUser profile if logged in
-  useEffect(() => {
-    if (currentUser) {
-      if (currentUser.fbToken && !fbToken) setFbToken(currentUser.fbToken);
-      if (currentUser.gadsRefreshToken && !gadsRefreshToken) setGadsRefreshToken(currentUser.gadsRefreshToken);
-      if (currentUser.gadsManagerId && !gadsManagerId) setGadsManagerId(currentUser.gadsManagerId);
-      if (currentUser.ttToken && !ttToken) setTtToken(currentUser.ttToken);
-      if (currentUser.waToken && !waToken) setWaToken(currentUser.waToken);
-      if (currentUser.waTarget && !waTarget) setWaTarget(currentUser.waTarget);
-      if (currentUser.fbAdvertisers && fbAdvertisers.length === 0) setFbAdvertisers(currentUser.fbAdvertisers);
-      if (currentUser.gadsAdvertisers && gadsAdvertisers.length === 0) setGadsAdvertisers(currentUser.gadsAdvertisers);
-      if (currentUser.ttAdvertisers && ttAdvertisers.length === 0) setTtAdvertisers(currentUser.ttAdvertisers);
-      if (currentUser.sheetIds) setSheetIds(currentUser.sheetIds);
-    }
-  }, [currentUser]);
+  // Consolidate currentUser logic into the main Effect above
+
 
   // Safety timeout for Auth Ready
   useEffect(() => {
@@ -1133,6 +1131,9 @@ export default function App() {
     setGoogleAccessToken('');
     setGoogleUser(null);
     setGoogleTokenExpiry(0);
+    localStorage.removeItem('kayaraya_google_token');
+    localStorage.removeItem('kayaraya_google_expiry');
+    localStorage.removeItem('kayaraya_google_user');
     addToast('Berhasil logout dari akun Google', 'info');
   };
 
@@ -1154,10 +1155,30 @@ export default function App() {
         spreadsheetId: id,
       });
       if (response.status === 200) {
-        setSheetIds(prev => ({ ...prev, [p]: id }));
+        const newSheetIds = { ...sheetIds, [p]: id };
+        setSheetIds(newSheetIds);
         setConnectedSheets(prev => ({ ...prev, [p]: true }));
         addSyncLog(p, `Terhubung ke: ${response.result.properties.title}`, 'ok');
         addToast('Spreadsheet terhubung!', 'success');
+        
+        // Auto-save to backend
+        if (currentUser) {
+          fetch('/api/users/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: currentUser.id,
+              sheetIds: newSheetIds,
+              automationEnabled: true
+            })
+          }).then(res => res.json()).then(result => {
+            if (result.ok) {
+              addToast('Spreadsheet ID disimpan di cloud!', 'info');
+              // Update local currentUser to reflect changes
+              setCurrentUser({ ...currentUser, sheetIds: newSheetIds });
+            }
+          }).catch(err => console.error('Auto-save error:', err));
+        }
       }
     } catch (err: any) {
       const msg = err.result?.error?.message || 'Gagal terhubung ke spreadsheet.';
