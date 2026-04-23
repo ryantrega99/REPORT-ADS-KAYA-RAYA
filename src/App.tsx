@@ -50,6 +50,7 @@ import {
   auth, 
   db, 
   googleProvider, 
+  GoogleAuthProvider,
   signInWithPopup, 
   signOut, 
   onAuthStateChanged,
@@ -1891,6 +1892,43 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentUser, fbToken, fbAdvertisers, gadsAdvertisers, googleAccessToken, sheetIds]);
 
+  // Auto-save logic for connection IDs
+  useEffect(() => {
+    if (!currentUser) return;
+    const gadsChanged = gadsManagerId !== currentUser.gadsManagerId || JSON.stringify(gadsAdvertisers) !== JSON.stringify(currentUser.gadsAdvertisers);
+    const fbChanged = fbToken !== currentUser.fbToken || JSON.stringify(fbAdvertisers) !== JSON.stringify(currentUser.fbAdvertisers);
+    
+    if (gadsChanged || fbChanged) {
+      const timer = setTimeout(() => {
+        fetch('/api/users/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: currentUser.id,
+            gadsManagerId,
+            gadsAdvertisers,
+            fbToken,
+            fbAdvertisers
+          })
+        }).then(res => res.json()).then(result => {
+          if (result.ok) {
+            if (gadsChanged) {
+              localStorage.setItem('kayaraya_gads_manager_id', gadsManagerId);
+              localStorage.setItem('kayaraya_gads_advertisers', JSON.stringify(gadsAdvertisers));
+            }
+            if (fbChanged) {
+              localStorage.setItem('kayaraya_fb_token', fbToken);
+              localStorage.setItem('kayaraya_fb_advertisers_v2', JSON.stringify(fbAdvertisers));
+            }
+            setCurrentUser({ ...currentUser, gadsManagerId, gadsAdvertisers, fbToken, fbAdvertisers });
+            console.log('Connection IDs auto-saved');
+          }
+        }).catch(err => console.error('Auto-save error:', err));
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gadsManagerId, gadsAdvertisers, fbToken, fbAdvertisers, currentUser]);
+
   const handleTikTokAuth = async () => {
     try {
       const res = await fetch('/api/tiktok/auth');
@@ -2542,7 +2580,7 @@ export default function App() {
 
     const reportSections = sortedDates.map(date => {
       const camps = dateGroups[date];
-      const platformStats: Record<string, { spend: number, product: string }> = {};
+      const platformStats: Record<string, { spend: number, clicks: number, leads: number, product: string }> = {};
       
       camps.forEach(c => {
         const platformName = c.platform === 'fb' ? 'Facebook' : (c.platform === 'google' ? 'Google' : 'TikTok');
