@@ -2592,14 +2592,13 @@ export default function App() {
       });
 
       const lines = Object.entries(platformStats)
-        .map(([key, stats]) => `=> ${key} = Rp ${fmtNum(Math.round(stats.spend))} | ${stats.clicks} Clicks | ${stats.leads} Leads`)
+        .map(([key, stats]) => `=> ${key} = Rp ${fmtNum(Math.round(stats.spend))}`)
         .join('\n');
 
       return `Spent Iklan ${date}\n${lines}`;
     }).join('\n\n');
 
-    const msg = `Advertiser Mr.BOB: Advertiser ${user.name}
-${reportSections}`;
+    const msg = `Advertiser Mr.BOB: Advertiser ${user.name}\n${reportSections}`;
 
     setWaMessage(msg);
   };
