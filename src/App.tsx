@@ -195,59 +195,73 @@ const SyncPanel = ({
           >
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <div className="space-y-6">
-                  <div>
-                    <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-3">Akun Google</label>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={accessToken ? undefined : onSignIn}
-                        className={cn(
-                          "flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all flex-1",
-                          accessToken ? "bg-[var(--bg-subtle)] border-[var(--border-base)] text-[var(--text-base)] cursor-default" : "bg-[var(--bg-surface)] border-[var(--border-base)] hover:border-indigo-300 hover:bg-indigo-50/10 text-[var(--text-muted)]"
-                        )}
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" className="shrink-0">
+                <div className={cn("space-y-6", !accessToken && "flex flex-col justify-center")}>
+                  {!accessToken ? (
+                    <div className="bg-indigo-50/30 border border-indigo-100 rounded-2xl p-6 text-center">
+                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-indigo-100">
+                        <svg width="24" height="24" viewBox="0 0 24 24">
                           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                         </svg>
-                        <span className="text-xs font-bold">{accessToken ? (googleUser?.name || googleUser?.email || 'Connected') : 'Login dengan Google'}</span>
+                      </div>
+                      <h4 className="text-[11px] font-black text-indigo-950 mb-1 uppercase tracking-wider">Izin Google Sheets Diperlukan</h4>
+                      <p className="text-[10px] text-indigo-600/70 mb-4 leading-relaxed max-w-[200px] mx-auto">Sesi Google Anda telah berakhir atau belum terhubung. Berikan izin kembali untuk akses spreadsheet.</p>
+                      <button onClick={onSignIn} className="btn bg-indigo-600 hover:bg-indigo-700 text-white w-full h-10 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20">
+                        Beri Izin Sekarang
                       </button>
-                      {accessToken && (
-                        <button onClick={onSignOut} className="btn btn-outline px-3 text-red-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200" title="Logout">
-                          <LogOut size={16} />
-                        </button>
-                      )}
                     </div>
-                    {accessToken && googleUser?.email && (
-                      <p className="text-[10px] text-emerald-600 font-bold mt-2 flex items-center gap-1">
-                        <Check size={10} /> {googleUser.email}
-                      </p>
-                    )}
-                  </div>
+                  ) : (
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Akun Google Terhubung</label>
+                          <button onClick={onSignOut} className="text-[9px] font-bold text-red-500 hover:underline uppercase tracking-tight flex items-center gap-1">
+                            <LogOut size={10} /> Ganti Akun
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-[var(--bg-subtle)] border border-[var(--border-base)] rounded-xl">
+                          {googleUser?.picture ? (
+                            <img src={googleUser.picture} className="w-8 h-8 rounded-full border border-white shadow-sm" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-100 flex items-center justify-center font-bold text-[10px] uppercase">
+                              {(googleUser?.name || 'U').charAt(0)}
+                            </div>
+                          )}
+                          <div className="truncate flex-1">
+                            <p className="text-[11px] font-black text-[var(--text-base)] truncate">{googleUser?.name || 'User Google'}</p>
+                            <p className="text-[9px] text-[var(--text-muted)] truncate">{googleUser?.email}</p>
+                          </div>
+                          <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+                            <Check size={12} />
+                          </div>
+                        </div>
+                      </div>
 
-                  <div>
-                    <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-3">Spreadsheet ID / URL</label>
-                    <div className="flex gap-2">
-                      <input 
-                        className="input h-10 text-xs" 
-                        placeholder="https://docs.google.com/spreadsheets/d/..." 
-                        value={urlInput}
-                        onChange={(e) => setUrlInput(e.target.value)}
-                      />
-                      <button onClick={() => onConnect(urlInput)} className="btn btn-outline h-10 px-4 text-xs shrink-0">Hubungkan</button>
-                    </div>
-                  </div>
+                      <div>
+                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-3">Spreadsheet ID / URL</label>
+                        <div className="flex gap-2">
+                          <input 
+                            className="input h-10 text-xs" 
+                            placeholder="https://docs.google.com/spreadsheets/d/..." 
+                            value={urlInput}
+                            onChange={(e) => setUrlInput(e.target.value)}
+                          />
+                          <button onClick={() => onConnect(urlInput)} className="btn btn-outline h-10 px-4 text-[10px] font-black uppercase tracking-widest shrink-0">Hubungkan</button>
+                        </div>
+                      </div>
 
-                  <div>
-                    <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-3">Nama Tab / Sheet</label>
-                    <input 
-                      className="input h-10 text-xs" 
-                      value={sheetTab}
-                      onChange={(e) => onTabChange(e.target.value)}
-                    />
-                  </div>
+                      <div>
+                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-3">Nama Tab / Sheet</label>
+                        <input 
+                          className="input h-10 text-xs" 
+                          value={sheetTab}
+                          onChange={(e) => onTabChange(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div>
                     <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-3">Kolom yang di-export <span className="font-medium lowercase tracking-normal">(klik untuk on/off)</span></label>
@@ -844,6 +858,11 @@ export default function App() {
             apiKey: googleApiKey,
             discoveryDocs: GOOGLE_CONFIG.DISCOVERY
           });
+          
+          if (googleAccessToken && Date.now() < googleTokenExpiry) {
+            (window as any).gapi.client.setToken({ access_token: googleAccessToken });
+          }
+
           setGapiReady(true);
           setGapiError(null);
           allLog('Google Sheets API siap.', 'ok');
@@ -1080,7 +1099,33 @@ export default function App() {
   const handleFirebaseLogin = async () => {
     setIsLoggingIn(true);
     try {
-      await signInWithPopup(auth, googleProvider);
+      // Add scopes for Google Sheets Sync
+      googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
+      
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      // Extract Access Token for Google Sheets
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setGoogleAccessToken(credential.accessToken);
+        const expiry = Date.now() + 3540 * 1000; // ~1 hour
+        setGoogleTokenExpiry(expiry);
+        localStorage.setItem('kayaraya_google_token', credential.accessToken);
+        localStorage.setItem('kayaraya_google_expiry', String(expiry));
+        
+        // Also fetch user info
+        fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${credential.accessToken}` }
+        }).then(r => r.json()).then(user => {
+          setGoogleUser(user);
+          localStorage.setItem('kayaraya_google_user', JSON.stringify(user));
+        }).catch(err => console.error('Failed to fetch google user info:', err));
+
+        if ((window as any).gapi?.client) {
+          (window as any).gapi.client.setToken({ access_token: credential.accessToken });
+        }
+      }
+
       addToast('Login berhasil!', 'success');
     } catch (err: any) {
       addToast('Login gagal: ' + err.message, 'warn');
