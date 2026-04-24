@@ -438,7 +438,7 @@ export default function App() {
   const [appendMode, setAppendMode] = useState<Record<string, boolean>>({ ads: true, ca: true });
   const [exportCols, setExportCols] = useState<Record<string, string[]>>({
     ads: ['Tanggal Fetch', 'User', 'Date', 'Platform', 'Product', 'Spend', 'Impressions', 'Clicks', 'Leads', 'CPR'],
-    ca: ['Tanggal Fetch', 'Product', 'Performance', 'Leads', 'Spend', 'CPR', 'Creative ID', 'Status', 'Impressions', 'Thruplays'],
+    ca: ['no', 'ADVERTISER', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'thruplays', 'leads/ result'],
   });
 
   const pendingActionRef = useRef<(() => void) | null>(null);
@@ -1281,22 +1281,29 @@ export default function App() {
         'CPR': r => r.leads > 0 ? Math.round(r.spend / r.leads) : 0,
       },
       ca: {
-        'Tanggal Fetch': () => now(), 
-        'Product': r => r.product || r.produk || '–',
-        'Performance': r => r.performance_label || r.performance_status || '–', 
-        'Leads': r => r.leads || 0,
-        'Spend': r => r.spend || 0,
-        'CPR': r => Math.round(r.cpr || 0),
-        'Creative ID': r => r.creative_id || r.id || '–', 
-        'Status': r => r.status || 'UNKNOWN',
-        'Impressions': r => r.impressions || 0, 
-        'Thruplays': r => r.thruplays || 0,
+        'ADVERTISER': r => r.advertiser_name || r.user_name || '–',
+        'PRODUK': r => r.produk || r.product || '–',
+        'LINK KONTEN': r => r.link_konten || r.preview_url || '–',
+        'KETERANGAN': r => r.keterangan || r.performance_label || '–', 
+        'STATUS': r => r.performance_status || '–',
+        'FORMAT KONTEN': r => r.format_konten || '–',
+        'CREATOR': r => r.creator || '–',
+        'EDITOR': r => r.editor || '–',
+        'IMPRESSION': r => r.impressions || 0, 
+        'average play time': r => r.avg_play_time || 0,
+        'thruplays': r => r.thruplays || 0,
+        'leads/ result': r => r.leads || 0,
       },
     };
 
     const ex = colExtractors[p];
     const values = [activeCols];
-    processedData.forEach(r => values.push(activeCols.map(col => ex[col] ? ex[col](r) : '')));
+    processedData.forEach((r, idx) => {
+      values.push(activeCols.map(col => {
+        if (col === 'no') return idx + 1;
+        return ex[col] ? ex[col](r) : '';
+      }));
+    });
 
     try {
       const range = `'${tabName}'!A1`;
@@ -2448,7 +2455,7 @@ export default function App() {
           insightsQuery = `insights.date_preset(${fbDatePreset})`;
         }
 
-        const fields = `name,status,creative{id,thumbnail_url,image_url,effective_object_story_id},${insightsQuery}{impressions,spend,actions,video_thruplay_watched_actions}`;
+        const fields = `name,status,creative{id,thumbnail_url,image_url,effective_object_story_id},${insightsQuery}{impressions,spend,actions,video_thruplay_watched_actions,video_avg_time_watched}`;
         const url = `https://graph.facebook.com/v21.0/${accountId}/ads?fields=${encodeURIComponent(fields)}&limit=100&access_token=${token}`;
 
         const res = await fetch(url).catch(e => {
@@ -2468,6 +2475,7 @@ export default function App() {
         const creatives: Creative[] = (result.data || []).map((ad: any) => {
           const insight = ad.insights?.data?.[0] || {};
           const thruplays = parseInt(insight.video_thruplay_watched_actions?.find((ac: any) => ac.action_type === 'video_thruplay')?.value || '0');
+          const avgWatchedTime = parseFloat(insight.video_avg_time_watched || '0');
           
           const actions = insight.actions || [];
           const leadsAction = actions.find((a: any) => a.action_type === 'lead' || a.action_type === 'offsite_conversion.fb_pixel_lead' || a.action_type === 'onsite_conversion.lead_grouped');
@@ -2500,6 +2508,7 @@ export default function App() {
             cpr: leads > 0 ? parseFloat(insight.spend || '0') / leads : 0,
             performance_status: leads >= 10 ? 'Winning' : leads > 2 ? 'Good' : 'Worst',
             thruplays: thruplays,
+            avg_play_time: avgWatchedTime,
           };
         }).filter((c: any) => (c.status === 'ACTIVE' || c.status === 'PAUSED') && (c.spend || 0) > 0);
 
@@ -4046,7 +4055,7 @@ export default function App() {
                   onSync={() => doSync('ca', fbCreatives)}
                   onTabChange={(val) => setSheetTabs(prev => ({ ...prev, ca: val }))}
                   onAppendModeChange={(val) => setAppendMode(prev => ({ ...prev, ca: val }))}
-                  columns={['Tanggal Fetch', 'Product', 'Performance', 'Leads', 'Creative ID', 'Status', 'Impressions', 'Thruplays']}
+                  columns={['no', 'ADVERTISER', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'thruplays', 'leads/ result']}
                   exportCols={exportCols.ca}
                   onToggleColumn={(col) => toggleColumn('ca', col)}
                 />
