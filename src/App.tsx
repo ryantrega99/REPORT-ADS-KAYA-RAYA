@@ -2473,10 +2473,24 @@ export default function App() {
           continue;
         }
 
-        const creatives: Creative[] = (result.data || []).map((ad: any) => {
+          const creatives: Creative[] = (result.data || []).map((ad: any) => {
           const insight = ad.insights?.data?.[0] || {};
-          const thruplays = parseInt(insight.video_thruplay_watched_actions?.find((ac: any) => ac.action_type === 'video_thruplay')?.value || '0');
-          const avgWatchedTime = parseFloat(insight.video_avg_time_watched_actions?.find((ac: any) => ac.action_type === 'video_avg_time_watched')?.value || insight.video_avg_time_watched_actions?.[0]?.value || '0');
+          
+          // Improved ThruPlays detection: check video_thruplay_watched_actions AND general actions
+          const thruplayVal = insight.video_thruplay_watched_actions?.find((ac: any) => 
+            ['video_thruplay', 'thruplay'].includes(ac.action_type)
+          )?.value || insight.actions?.find((ac: any) => 
+            ['video_thruplay', 'thruplay'].includes(ac.action_type)
+          )?.value || insight.video_thruplay_watched_actions?.[0]?.value || '0';
+          
+          const thruplays = parseInt(thruplayVal);
+
+          // Improved Avg Watched Time detection
+          const avgTimeVal = insight.video_avg_time_watched_actions?.find((ac: any) => 
+            ac.action_type === 'video_avg_time_watched'
+          )?.value || insight.video_avg_time_watched_actions?.[0]?.value || '0';
+          
+          const avgWatchedTime = parseFloat(avgTimeVal);
           
           const actions = insight.actions || [];
           const leadsAction = actions.find((a: any) => a.action_type === 'lead' || a.action_type === 'offsite_conversion.fb_pixel_lead' || a.action_type === 'onsite_conversion.lead_grouped');
@@ -2490,8 +2504,12 @@ export default function App() {
           }
 
           const productName = PRODUCTS.find(p => ad.name.toLowerCase().includes(p.toLowerCase())) || 'Umum';
-          const finalProduct = fetchProduct !== 'all' ? fetchProduct : productName;
-          const isVideo = ad.creative?.thumbnail_url?.includes('video') || ad.name.toLowerCase().includes('video');
+          const finalProduct = (fetchProduct && fetchProduct !== 'all') ? fetchProduct : productName;
+          const isVideo = ad.creative?.thumbnail_url?.includes('video') || ad.name.toLowerCase().includes('video') || ad.creative?.image_url === undefined;
+
+          // Ad Name: [Campaign] Ad Name | Product
+          const campName = ad.campaign?.name || 'No Campaign';
+          const displayAdName = `${campName} | ${ad.name} | ${finalProduct}`;
 
           return {
             id: ad.creative?.id || 'N/A',
@@ -2499,10 +2517,10 @@ export default function App() {
             status: ad.status,
             thumbnail_url: ad.creative?.thumbnail_url || ad.creative?.image_url,
             ad_id: ad.id,
-            ad_name: `${ad.campaign?.name || 'No Campaign'} | ${ad.name} | ${finalProduct}`,
+            ad_name: displayAdName,
             advertiser_name: fetchUser || currentUser?.name || id,
             link_konten: linkKonten,
-            produk: finalProduct,
+            produk: campName, // Make Campaign Name the main label on the card
             format_konten: isVideo ? 'Video' : 'Image',
             impressions: parseInt(insight.impressions || '0'),
             leads: leads,
