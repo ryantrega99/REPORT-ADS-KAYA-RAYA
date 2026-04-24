@@ -2455,7 +2455,7 @@ export default function App() {
           insightsQuery = `insights.date_preset(${fbDatePreset})`;
         }
 
-        const fields = `name,status,creative{id,thumbnail_url,image_url,effective_object_story_id},${insightsQuery}{impressions,spend,actions,video_thruplay_watched_actions,video_avg_time_watched}`;
+        const fields = `name,status,creative{id,thumbnail_url,image_url,effective_object_story_id},${insightsQuery}{impressions,spend,actions,video_thruplay_watched_actions,video_avg_time_watched_actions}`;
         const url = `https://graph.facebook.com/v21.0/${accountId}/ads?fields=${encodeURIComponent(fields)}&limit=100&access_token=${token}`;
 
         const res = await fetch(url).catch(e => {
@@ -2475,7 +2475,7 @@ export default function App() {
         const creatives: Creative[] = (result.data || []).map((ad: any) => {
           const insight = ad.insights?.data?.[0] || {};
           const thruplays = parseInt(insight.video_thruplay_watched_actions?.find((ac: any) => ac.action_type === 'video_thruplay')?.value || '0');
-          const avgWatchedTime = parseFloat(insight.video_avg_time_watched || '0');
+          const avgWatchedTime = parseFloat(insight.video_avg_time_watched_actions?.find((ac: any) => ac.action_type === 'video_avg_time_watched')?.value || '0');
           
           const actions = insight.actions || [];
           const leadsAction = actions.find((a: any) => a.action_type === 'lead' || a.action_type === 'offsite_conversion.fb_pixel_lead' || a.action_type === 'onsite_conversion.lead_grouped');
