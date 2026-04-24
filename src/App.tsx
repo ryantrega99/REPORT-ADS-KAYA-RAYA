@@ -438,7 +438,7 @@ export default function App() {
   const [appendMode, setAppendMode] = useState<Record<string, boolean>>({ ads: true, ca: true });
   const [exportCols, setExportCols] = useState<Record<string, string[]>>({
     ads: ['Tanggal Fetch', 'User', 'Date', 'Platform', 'Product', 'Spend', 'Impressions', 'Clicks', 'Leads', 'CPR'],
-    ca: ['no', 'ADVERTISER', 'NAMA ADS', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'ThruPlays', 'leads/ result'],
+    ca: ['no', 'ADVERTISER', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'ThruPlays', 'leads/ result'],
   });
 
   const pendingActionRef = useRef<(() => void) | null>(null);
@@ -1282,7 +1282,6 @@ export default function App() {
       },
       ca: {
         'ADVERTISER': r => r.advertiser_name || r.user_name || '–',
-        'NAMA ADS': r => r.ad_name || '–',
         'PRODUK': r => r.produk || r.product || '–',
         'LINK KONTEN': r => r.link_konten || r.preview_url || '–',
         'KETERANGAN': r => r.keterangan || r.performance_label || '–', 
@@ -4075,7 +4074,7 @@ export default function App() {
                   onSync={() => doSync('ca', fbCreatives)}
                   onTabChange={(val) => setSheetTabs(prev => ({ ...prev, ca: val }))}
                   onAppendModeChange={(val) => setAppendMode(prev => ({ ...prev, ca: val }))}
-                  columns={['no', 'ADVERTISER', 'NAMA ADS', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'ThruPlays', 'leads/ result']}
+                  columns={['no', 'ADVERTISER', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'ThruPlays', 'leads/ result']}
                   exportCols={exportCols.ca}
                   onToggleColumn={(col) => toggleColumn('ca', col)}
                 />
