@@ -438,7 +438,7 @@ export default function App() {
   const [appendMode, setAppendMode] = useState<Record<string, boolean>>({ ads: true, ca: true });
   const [exportCols, setExportCols] = useState<Record<string, string[]>>({
     ads: ['Tanggal Fetch', 'User', 'Date', 'Platform', 'Product', 'Spend', 'Impressions', 'Clicks', 'Leads', 'CPR'],
-    ca: ['no', 'ADVERTISER', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'thruplays', 'leads/ result'],
+    ca: ['no', 'ADVERTISER', 'NAMA ADS', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'ThruPlays', 'leads/ result'],
   });
 
   const pendingActionRef = useRef<(() => void) | null>(null);
@@ -1282,6 +1282,7 @@ export default function App() {
       },
       ca: {
         'ADVERTISER': r => r.advertiser_name || r.user_name || '–',
+        'NAMA ADS': r => r.ad_name || '–',
         'PRODUK': r => r.produk || r.product || '–',
         'LINK KONTEN': r => r.link_konten || r.preview_url || '–',
         'KETERANGAN': r => r.keterangan || r.performance_label || '–', 
@@ -1291,7 +1292,7 @@ export default function App() {
         'EDITOR': r => r.editor || '–',
         'IMPRESSION': r => r.impressions || 0, 
         'average play time': r => r.avg_play_time || 0,
-        'thruplays': r => r.thruplays || 0,
+        'ThruPlays': r => r.ThruPlays || 0,
         'leads/ result': r => r.leads || 0,
       },
     };
@@ -2455,7 +2456,7 @@ export default function App() {
           insightsQuery = `insights.date_preset(${fbDatePreset})`;
         }
 
-        const fields = `name,status,creative{id,thumbnail_url,image_url,effective_object_story_id},${insightsQuery}{impressions,spend,actions,video_thruplay_watched_actions,video_avg_time_watched_actions}`;
+        const fields = `name,status,campaign{name},creative{id,thumbnail_url,image_url,effective_object_story_id},${insightsQuery}{impressions,spend,actions,video_thruplay_watched_actions,video_avg_time_watched_actions}`;
         const url = `https://graph.facebook.com/v21.0/${accountId}/ads?fields=${encodeURIComponent(fields)}&limit=100&access_token=${token}`;
 
         const res = await fetch(url).catch(e => {
@@ -2489,6 +2490,7 @@ export default function App() {
           }
 
           const productName = PRODUCTS.find(p => ad.name.toLowerCase().includes(p.toLowerCase())) || 'Umum';
+          const finalProduct = fetchProduct !== 'all' ? fetchProduct : productName;
           const isVideo = ad.creative?.thumbnail_url?.includes('video') || ad.name.toLowerCase().includes('video');
 
           return {
@@ -2497,17 +2499,17 @@ export default function App() {
             status: ad.status,
             thumbnail_url: ad.creative?.thumbnail_url || ad.creative?.image_url,
             ad_id: ad.id,
-            ad_name: ad.name,
+            ad_name: `${ad.campaign?.name || 'No Campaign'} | ${ad.name} | ${finalProduct}`,
             advertiser_name: fetchUser || currentUser?.name || id,
             link_konten: linkKonten,
-            produk: fetchProduct !== 'all' ? fetchProduct : productName,
+            produk: finalProduct,
             format_konten: isVideo ? 'Video' : 'Image',
             impressions: parseInt(insight.impressions || '0'),
             leads: leads,
             spend: parseFloat(insight.spend || '0'),
             cpr: leads > 0 ? parseFloat(insight.spend || '0') / leads : 0,
             performance_status: leads >= 10 ? 'Winning' : leads > 2 ? 'Good' : 'Worst',
-            thruplays: thruplays,
+            ThruPlays: thruplays,
             avg_play_time: avgWatchedTime,
           };
         }).filter((c: any) => (c.status === 'ACTIVE' || c.status === 'PAUSED') && (c.spend || 0) > 0);
@@ -2868,7 +2870,7 @@ export default function App() {
   }
 
 
-  const totalCreativeThruplays = fbCreatives.reduce((sum, c) => sum + (c.thruplays || 0), 0);
+  const totalCreativeThruplays = fbCreatives.reduce((sum, c) => sum + (c.ThruPlays || 0), 0);
   const totalCreativeLeads = fbCreatives.reduce((sum, c) => sum + (c.leads || 0), 0);
   const totalCreativeImpressions = fbCreatives.reduce((sum, c) => sum + (c.impressions || 0), 0);
 
@@ -4055,7 +4057,7 @@ export default function App() {
                   onSync={() => doSync('ca', fbCreatives)}
                   onTabChange={(val) => setSheetTabs(prev => ({ ...prev, ca: val }))}
                   onAppendModeChange={(val) => setAppendMode(prev => ({ ...prev, ca: val }))}
-                  columns={['no', 'ADVERTISER', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'thruplays', 'leads/ result']}
+                  columns={['no', 'ADVERTISER', 'NAMA ADS', 'PRODUK', 'LINK KONTEN', 'KETERANGAN', 'STATUS', 'FORMAT KONTEN', 'CREATOR', 'EDITOR', 'IMPRESSION', 'average play time', 'ThruPlays', 'leads/ result']}
                   exportCols={exportCols.ca}
                   onToggleColumn={(col) => toggleColumn('ca', col)}
                 />
@@ -4113,8 +4115,8 @@ export default function App() {
                                 <p className="font-bold text-[var(--text-base)] text-sm">{fmtNum(c.impressions || 0)}</p>
                               </div>
                               <div className="bg-[var(--bg-subtle)] rounded-xl p-2 text-center">
-                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-0.5">Thruplay</p>
-                                <p className="font-bold text-[var(--text-base)] text-sm">{fmtNum(c.thruplays || 0)}</p>
+                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-0.5">ThruPlays</p>
+                                <p className="font-bold text-[var(--text-base)] text-sm">{fmtNum(c.ThruPlays || 0)}</p>
                               </div>
                               <div className="bg-[var(--bg-subtle)] rounded-xl p-2 text-center">
                                 <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-0.5">Avg S</p>

@@ -19,7 +19,7 @@ export interface Creative {
   cpr?: number;
   performance_status?: 'Winning' | 'Good' | 'Worst';
   avg_play_time?: number;
-  thruplays?: number;
+  ThruPlays?: number;
 }
 
 export interface Platform {
