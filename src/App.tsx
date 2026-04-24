@@ -2455,7 +2455,7 @@ export default function App() {
           insightsQuery = `insights.date_preset(${fbDatePreset})`;
         }
 
-        const fields = `name,status,creative{id,thumbnail_url,image_url,effective_object_story_id},${insightsQuery}{impressions,spend,actions,video_thruplay_watched_actions,video_avg_time_watched_actions,video_avg_time_watched_v2}`;
+        const fields = `name,status,creative{id,thumbnail_url,image_url,effective_object_story_id},${insightsQuery}{impressions,spend,actions,video_thruplay_watched_actions,video_avg_time_watched_actions}`;
         const url = `https://graph.facebook.com/v21.0/${accountId}/ads?fields=${encodeURIComponent(fields)}&limit=100&access_token=${token}`;
 
         const res = await fetch(url).catch(e => {
@@ -2475,7 +2475,7 @@ export default function App() {
         const creatives: Creative[] = (result.data || []).map((ad: any) => {
           const insight = ad.insights?.data?.[0] || {};
           const thruplays = parseInt(insight.video_thruplay_watched_actions?.find((ac: any) => ac.action_type === 'video_thruplay')?.value || '0');
-          const avgWatchedTime = parseFloat(insight.video_avg_time_watched_actions?.find((ac: any) => ac.action_type === 'video_avg_time_watched')?.value || insight.video_avg_time_watched_v2 || '0');
+          const avgWatchedTime = parseFloat(insight.video_avg_time_watched_actions?.find((ac: any) => ac.action_type === 'video_avg_time_watched')?.value || insight.video_avg_time_watched_actions?.[0]?.value || '0');
           
           const actions = insight.actions || [];
           const leadsAction = actions.find((a: any) => a.action_type === 'lead' || a.action_type === 'offsite_conversion.fb_pixel_lead' || a.action_type === 'onsite_conversion.lead_grouped');
@@ -2498,9 +2498,9 @@ export default function App() {
             thumbnail_url: ad.creative?.thumbnail_url || ad.creative?.image_url,
             ad_id: ad.id,
             ad_name: ad.name,
-            advertiser_name: currentUser?.name || id,
+            advertiser_name: fetchUser || currentUser?.name || id,
             link_konten: linkKonten,
-            produk: productName,
+            produk: fetchProduct !== 'all' ? fetchProduct : productName,
             format_konten: isVideo ? 'Video' : 'Image',
             impressions: parseInt(insight.impressions || '0'),
             leads: leads,
@@ -4106,7 +4106,7 @@ export default function App() {
                               </div>
                               <div className="bg-emerald-50 rounded-xl p-2 text-center">
                                 <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-0.5">Spend</p>
-                                <p className="font-black text-emerald-600 text-sm">Rp {fmtNum(c._spend || 0)}</p>
+                                <p className="font-black text-emerald-600 text-sm">Rp {fmtNum(c.spend || 0)}</p>
                               </div>
                               <div className="bg-[var(--bg-subtle)] rounded-xl p-2 text-center">
                                 <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-0.5">Impr</p>
@@ -4115,6 +4115,10 @@ export default function App() {
                               <div className="bg-[var(--bg-subtle)] rounded-xl p-2 text-center">
                                 <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-0.5">Thruplay</p>
                                 <p className="font-bold text-[var(--text-base)] text-sm">{fmtNum(c.thruplays || 0)}</p>
+                              </div>
+                              <div className="bg-[var(--bg-subtle)] rounded-xl p-2 text-center">
+                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-0.5">Avg S</p>
+                                <p className="font-bold text-[var(--text-base)] text-sm">{c.avg_play_time?.toFixed(1) || 0}s</p>
                               </div>
                             </div>
                           </div>
