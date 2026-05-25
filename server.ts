@@ -557,7 +557,20 @@ app.post("/api/platforms/delete", async (req, res) => {
     try {
       await ensureAuth();
       const { userId, campaigns } = req.body;
-      memoryData[userId] = { campaigns };
+      
+      // Merge with previous campaigns in memory so we don't overwrite older/other campaigns
+      const existing = memoryData[userId]?.campaigns || [];
+      const campMap = new Map();
+      existing.forEach((c: any) => {
+        if (c && c.id) campMap.set(c.id, c);
+      });
+      
+      campaigns.forEach((c: any) => {
+        if (c && c.id) campMap.set(c.id, c);
+      });
+      
+      const mergedCampaigns = Array.from(campMap.values());
+      memoryData[userId] = { campaigns: mergedCampaigns };
       
       // Persist to Firestore (Individual campaigns)
       for (const c of campaigns) {

@@ -1729,6 +1729,25 @@ export default function App() {
           
           (result.data || []).forEach((c: any) => {
             const detectedProduct = discoverProduct(c.campaign_name, effectiveProducts);
+            
+            // Extract leads / conversions accurately from Meta actions
+            const actions = c.actions || [];
+            const leadActTypes = [
+              'lead', 
+              'onsite_conversion.lead_grouped', 
+              'offsite_conversion.fb_pixel_lead',
+              'complete_registration',
+              'offsite_conversion.fb_pixel_complete_registration',
+              'contact',
+              'offsite_conversion.fb_pixel_contact'
+            ];
+            let leads = 0;
+            actions.forEach((act: any) => {
+              if (leadActTypes.includes(act.action_type)) {
+                leads += parseInt(act.value) || 0;
+              }
+            });
+
             allProcessed.push({
               id: `fb_${c.campaign_id}_${c.date_start}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
               name: c.campaign_name,
@@ -1736,7 +1755,7 @@ export default function App() {
               spend: parseFloat(c.spend || '0'),
               impressions: parseInt(c.impressions) || 0,
               clicks: parseInt(c.clicks) || 0,
-              leads: 0,
+              leads: leads,
               platform: 'Meta',
               timestamp: nowStr,
               date_range: c.date_start,
@@ -1856,6 +1875,9 @@ export default function App() {
     const finalData = Object.values(aggregated);
 
     setAdsRawData(finalData);
+
+    // Auto import to local DB & Firestore for daily automation so that stats are permanently saved / recorded
+    await importAdsToApp(finalData);
 
     // 4. Auto Sync
     let syncStatus = 'Skipped (No Google Sheets connected)';
@@ -2053,8 +2075,24 @@ export default function App() {
 
             const date = c.date_start;
             const actions = c.actions || [];
-            const leadAct = actions.find((a: any) => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
-            const leads = leadAct ? parseInt(leadAct.value) : 0;
+            
+            // Extract leads / conversions accurately from Meta actions by summing matching types
+            const leadActTypes = [
+              'lead', 
+              'onsite_conversion.lead_grouped', 
+              'offsite_conversion.fb_pixel_lead',
+              'complete_registration',
+              'offsite_conversion.fb_pixel_complete_registration',
+              'contact',
+              'offsite_conversion.fb_pixel_contact'
+            ];
+            let leads = 0;
+            actions.forEach((act: any) => {
+              if (leadActTypes.includes(act.action_type)) {
+                leads += parseInt(act.value) || 0;
+              }
+            });
+
             const clicks = parseInt(c.clicks) || 0;
 
             // Auto-detect product
@@ -2351,16 +2389,31 @@ export default function App() {
     });
 
     try {
-      const merged = [...newCampaigns];
-
-      // Save to Express API instead of Firestore
-      const groupedByUserId: Record<string, Campaign[]> = {};
-      merged.forEach(c => {
-        if (!groupedByUserId[c.user_id]) groupedByUserId[c.user_id] = [];
-        groupedByUserId[c.user_id].push(c);
+      // Merge with previous campaigns from local state so we don't overwrite other dates / products!
+      const mergedByUserId: Record<string, Campaign[]> = {};
+      
+      // Initialize with currently loaded campaigns so we do not lose past data
+      Object.keys(data).forEach(uId => {
+        mergedByUserId[uId] = [...(data[uId]?.campaigns || [])];
       });
 
-      for (const [userId, userCamps] of Object.entries(groupedByUserId)) {
+      newCampaigns.forEach(c => {
+        if (!mergedByUserId[c.user_id]) {
+          mergedByUserId[c.user_id] = [];
+        }
+        
+        // Find existing campaign with same ID
+        const idx = mergedByUserId[c.user_id].findIndex(existing => existing.id === c.id);
+        if (idx !== -1) {
+          // Update details while maintaining any fields we might not have fetched
+          mergedByUserId[c.user_id][idx] = { ...mergedByUserId[c.user_id][idx], ...c };
+        } else {
+          // Append new kampanye
+          mergedByUserId[c.user_id].push(c);
+        }
+      });
+
+      for (const [userId, userCamps] of Object.entries(mergedByUserId)) {
         await fetch('/api/data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
